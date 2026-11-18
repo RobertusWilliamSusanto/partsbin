@@ -1,0 +1,701 @@
+/* ==========================================================================
+   PARTSBIN — LAYOUT MOBILE-FIRST, CLASS DASAR MODUL 4, & KOMPONEN UI
+   ========================================================================== */
+
+/* --- 1. Resep Glassmorphism Terbatas (HANYA elemen melayang) --- */
+.glass {
+  background-color: var(--glass-bg);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border-color: var(--glass-border);
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass {
+    background-color: var(--surface);
+  }
+}
+
+/* --- 2. Shell & Layout Mobile-First (Class Dasar Modul 4) --- */
+.shell {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--paper);
+  color: var(--ink);
+}
+
+.main {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  flex: 1;
+  padding: 0 16px calc(84px + env(safe-area-inset-bottom));
+}
+
+.masthead,
+.page {
+  padding: 16px 0 12px;
+}
+
+.masthead {
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 16px;
+}
+
+.display {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.lede {
+  margin-top: 4px;
+  font-size: 0.875rem;
+  color: var(--steel);
+}
+
+.list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 0 8px;
+}
+
+.list-head h2 {
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--steel);
+}
+
+.count {
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--steel);
+}
+
+.stock {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.card {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: var(--shadow-1);
+  transition: border-color 150ms ease, background-color 150ms ease;
+}
+
+.card--interactive:hover {
+  border-color: var(--accent);
+}
+
+/* --- 3. Tipografi Presisi & Utilitas Angka --- */
+.mono-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background-color: var(--surface-2);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.num,
+.price,
+.stat-value,
+.stepper-val,
+.readiness-pct {
+  font-variant-numeric: tabular-nums;
+}
+
+.price {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.muted {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.stack-sm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stack-md {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.row-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.row-wrap {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* --- 4. TopBar & BottomNav --- */
+.top-bar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.top-bar__inner {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 8px 16px;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.top-bar__left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.top-bar__title {
+  font-size: 1rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.top-bar__subtitle {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.top-bar__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.bottom-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 25;
+  border-top: 1px solid var(--glass-border);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.bottom-nav__inner {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.bottom-nav__link {
+  min-height: 56px;
+  min-width: 44px;
+  padding: 6px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  border-top: 2px solid transparent;
+  transition: color 150ms ease, border-color 150ms ease;
+}
+
+.bottom-nav__link:hover {
+  color: var(--text);
+}
+
+.bottom-nav__link.active {
+  color: var(--accent);
+  border-top-color: var(--accent);
+}
+
+/* --- 5. Buttons & Icon Buttons (Area Sentuh Minimal 44x44px) --- */
+.btn,
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 16px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease,
+    transform 150ms ease, opacity 150ms ease;
+}
+
+.icon-btn {
+  padding: 0;
+  width: 44px;
+  height: 44px;
+  background-color: var(--surface);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.btn--sm {
+  padding: 0 12px;
+  font-size: 0.875rem;
+}
+
+.btn--primary {
+  background-color: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.btn--outline {
+  background-color: var(--surface);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.btn--danger {
+  background-color: var(--danger-tint);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.btn--ghost {
+  background-color: transparent;
+  border-color: transparent;
+  color: var(--text-muted);
+}
+
+.btn:hover:not(:disabled),
+.icon-btn:hover:not(:disabled) {
+  opacity: 0.92;
+}
+
+.btn--outline:hover:not(:disabled),
+.icon-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.btn--ghost:hover:not(:disabled) {
+  background-color: var(--surface-2);
+  color: var(--text);
+}
+
+.btn:active:not(:disabled),
+.icon-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.btn:disabled,
+.icon-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* --- 6. Chip Status (Warna + Ikon + Teks) --- */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.chip--ok {
+  background-color: var(--ok-tint);
+  color: var(--ok);
+}
+
+.chip--warn {
+  background-color: var(--warn-tint);
+  color: var(--warn);
+}
+
+.chip--danger {
+  background-color: var(--danger-tint);
+  color: var(--danger);
+}
+
+.chip--neutral {
+  background-color: var(--surface-2);
+  color: var(--text-muted);
+}
+
+/* --- 7. Progress Bar Readiness & Stepper Stok --- */
+.readiness-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.readiness-track {
+  flex: 1;
+  height: 10px;
+  border-radius: 9999px;
+  background-color: var(--surface-2);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.readiness-fill {
+  height: 100%;
+  border-radius: 9999px;
+  transition: background-color 150ms ease;
+}
+
+.readiness-fill--ok {
+  background-color: var(--ok);
+}
+
+.readiness-fill--accent {
+  background-color: var(--accent);
+}
+
+.readiness-fill--warn {
+  background-color: var(--warn);
+}
+
+.readiness-pct {
+  font-size: 0.875rem;
+  font-weight: 700;
+  min-width: 44px;
+  text-align: right;
+}
+
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background-color: var(--surface-2);
+  overflow: hidden;
+}
+
+.stepper-btn {
+  min-width: 44px;
+  min-height: 44px;
+  border: none;
+  background-color: var(--surface);
+  color: var(--text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.stepper-btn:hover:not(:disabled) {
+  background-color: var(--surface-2);
+  color: var(--accent);
+}
+
+.stepper-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.stepper-val {
+  min-width: 44px;
+  padding: 0 8px;
+  text-align: center;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+/* --- 8. StatCard Grid (Dashboard 2x2) --- */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.stat-card {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: var(--shadow-1);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.stat-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* --- 9. FilterBar, Forms, PWABadge, & Modals --- */
+.filter-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-wrap__icon {
+  position: absolute;
+  left: 12px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.form-input,
+.form-select,
+.form-textarea {
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  color: var(--text);
+  font-size: 0.875rem;
+  transition: border-color 150ms ease;
+}
+
+.search-input {
+  padding-left: 40px;
+  padding-right: 44px;
+}
+
+.search-clear {
+  position: absolute;
+  right: 0;
+  min-width: 44px;
+  min-height: 44px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.form-textarea {
+  min-height: 88px;
+  resize: vertical;
+}
+
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.filter-pills {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.filter-pill {
+  flex-shrink: 0;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 14px;
+  border-radius: 9999px;
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease;
+}
+
+.filter-pill--active {
+  background-color: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.pwa-badge {
+  width: 100%;
+  max-width: 480px;
+  margin: 8px auto 0;
+  padding: 8px 16px;
+}
+
+.pwa-badge__box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.pwa-badge__box--offline {
+  background-color: var(--warn-tint);
+  border-color: var(--warn);
+  color: var(--warn);
+}
+
+.pwa-badge__text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background-color: rgba(15, 23, 42, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.modal-box {
+  width: 100%;
+  max-width: 440px;
+  max-height: 90dvh;
+  overflow-y: auto;
+  border-radius: 16px;
+  border: 1px solid var(--glass-border);
+  padding: 20px;
+  box-shadow: var(--shadow-1);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.modal-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.alert {
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font-size: 0.875rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.alert--danger {
+  background-color: var(--danger-tint);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.alert--warn {
+  background-color: var(--warn-tint);
+  border-color: var(--warn);
+  color: var(--warn);
+}
+
+.empty-state,
+.loading-state {
+  text-align: center;
+  padding: 32px 16px;
+  color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
