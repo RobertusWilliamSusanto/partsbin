@@ -1,22 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useSyncExternalStore } from 'react';
 
-// Satu sumber kebenaran status koneksi browser untuk banner offline dan menonaktifkan aksi tulis
+// Satu sumber kebenaran status jaringan dengan 1 pasang event listener global (hemat memori)
+function subscribe(callback) {
+  window.addEventListener('online', callback);
+  window.addEventListener('offline', callback);
+  return () => {
+    window.removeEventListener('online', callback);
+    window.removeEventListener('offline', callback);
+  };
+}
+
+function getSnapshot() {
+  return typeof navigator !== 'undefined' ? navigator.onLine : true;
+}
+
 export function useOnlineStatus() {
-  const [isOnline, setIsOnline] = useState(() =>
-    typeof navigator !== 'undefined' ? navigator.onLine : true
-  );
-
-  useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
-
-  return isOnline;
+  return useSyncExternalStore(subscribe, getSnapshot, () => true);
 }

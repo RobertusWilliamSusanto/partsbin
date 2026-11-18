@@ -103,76 +103,78 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div>
-            <div className="list-head">
-              <h2>Peringatan Stok Menipis</h2>
-              <span className="count">{metrics.lowStockComponents.length} item</span>
-            </div>
-
-            {metrics.lowStockComponents.length === 0 ? (
-              <div className="card empty-state">
-                <PackageCheck size={20} strokeWidth={1.75} aria-hidden="true" />
-                <p>Seluruh komponen berada di atas batas stok minimum.</p>
+          <div className="dashboard-columns">
+            <div>
+              <div className="list-head">
+                <h2>Peringatan Stok Menipis</h2>
+                <span className="count">{metrics.lowStockComponents.length} item</span>
               </div>
-            ) : (
-              <ul className="stock">
-                {metrics.lowStockComponents.map((comp) => (
-                  <li key={comp.id} className="card card--interactive">
-                    <Link to={`/components/${comp.id}`} className="link-row">
-                      <div className="stack-sm" style={{ minWidth: 0 }}>
-                        <span className="card-title">{comp.name}</span>
-                        <div className="row-wrap">
-                          <span className="mono-badge">{comp.bin_location}</span>
-                          <span className="chip chip--warn">
-                            <AlertTriangle size={20} strokeWidth={1.75} aria-hidden="true" />
-                            <span>
-                              Stok {comp.stock} / Min {comp.min_stock}
+
+              {metrics.lowStockComponents.length === 0 ? (
+                <div className="card empty-state">
+                  <PackageCheck size={20} strokeWidth={1.75} aria-hidden="true" />
+                  <p>Seluruh komponen berada di atas batas stok minimum.</p>
+                </div>
+              ) : (
+                <ul className="stock">
+                  {metrics.lowStockComponents.map((comp) => (
+                    <li key={comp.id} className="card card--interactive">
+                      <Link to={`/components/${comp.id}`} className="link-row">
+                        <div className="stack-sm" style={{ minWidth: 0 }}>
+                          <span className="card-title">{comp.name}</span>
+                          <div className="row-wrap">
+                            <span className="mono-badge">{comp.bin_location}</span>
+                            <span className="chip chip--warn">
+                              <AlertTriangle size={20} strokeWidth={1.75} aria-hidden="true" />
+                              <span>
+                                Stok {comp.stock} / Min {comp.min_stock}
+                              </span>
                             </span>
-                          </span>
+                          </div>
                         </div>
-                      </div>
-                      <ChevronRight size={20} strokeWidth={1.75} aria-hidden="true" />
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          <div>
-            <div className="list-head">
-              <h2>Proyek Siap Rakit (100%)</h2>
-              <span className="count">{metrics.readyProjects.length} proyek</span>
+                        <ChevronRight size={20} strokeWidth={1.75} aria-hidden="true" />
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
 
-            {metrics.readyProjects.length === 0 ? (
-              <div className="card empty-state">
-                <FolderKanban size={20} strokeWidth={1.75} aria-hidden="true" />
-                <p>Belum ada proyek dengan kesiapan BOM 100%.</p>
+            <div>
+              <div className="list-head">
+                <h2>Proyek Siap Rakit (100%)</h2>
+                <span className="count">{metrics.readyProjects.length} proyek</span>
               </div>
-            ) : (
-              <ul className="stock">
-                {metrics.readyProjects.map((proj) => (
-                  <li key={proj.id} className="card card--interactive">
-                    <Link to={`/projects/${proj.id}`} className="link-row">
-                      <div className="stack-sm" style={{ minWidth: 0 }}>
-                        <span className="card-title">{proj.name}</span>
-                        <div className="row-wrap">
-                          <span className="chip chip--ok">
-                            <CheckCircle2 size={20} strokeWidth={1.75} aria-hidden="true" />
-                            <span>Siap Rakit</span>
-                          </span>
-                          <span className="count">
-                            {proj.total_items} item BOM · {formatRupiah(proj.total_bom_cost)}
-                          </span>
+
+              {metrics.readyProjects.length === 0 ? (
+                <div className="card empty-state">
+                  <FolderKanban size={20} strokeWidth={1.75} aria-hidden="true" />
+                  <p>Belum ada proyek dengan kesiapan BOM 100%.</p>
+                </div>
+              ) : (
+                <ul className="stock">
+                  {metrics.readyProjects.map((proj) => (
+                    <li key={proj.id} className="card card--interactive">
+                      <Link to={`/projects/${proj.id}`} className="link-row">
+                        <div className="stack-sm" style={{ minWidth: 0 }}>
+                          <span className="card-title">{proj.name}</span>
+                          <div className="row-wrap">
+                            <span className="chip chip--ok">
+                              <CheckCircle2 size={20} strokeWidth={1.75} aria-hidden="true" />
+                              <span>Siap Rakit</span>
+                            </span>
+                            <span className="count">
+                              {proj.total_items} item BOM · {formatRupiah(proj.total_bom_cost)}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                      <ChevronRight size={20} strokeWidth={1.75} aria-hidden="true" />
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
+                        <ChevronRight size={20} strokeWidth={1.75} aria-hidden="true" />
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
         </>
       )}

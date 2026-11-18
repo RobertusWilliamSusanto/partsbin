@@ -32,7 +32,7 @@ export default function ConfirmModal({
       aria-labelledby="confirm-modal-title"
       onClick={() => !loading && onCancel?.()}
     >
-      <div className="modal-box glass" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-box" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div className="row-wrap">
             <AlertTriangle size={20} strokeWidth={1.75} aria-hidden="true" />

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Plus,
@@ -9,12 +9,13 @@ import {
   PackageOpen,
   X,
 } from 'lucide-react';
-import { useComponents } from '../hooks/useComponents';
+import { useComponents, updateComponentInCache } from '../hooks/useComponents';
+import { invalidateProjectsCache } from '../hooks/useProjects';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import componentService from '../services/componentService';
 import { formatRupiah } from '../utils/format';
 import FilterBar from '../components/FilterBar';
-import ComponentFormModal from '../components/modals/ComponentFormModal';
+import ComponentInlineForm from '../components/ComponentInlineForm';
 
 const CATEGORY_PILLS = [
   { value: 'ALL', label: 'All' },
@@ -27,7 +28,7 @@ const CATEGORY_PILLS = [
   { value: 'Display', label: 'Display' },
 ];
 
-export default function ComponentListPage({ setTopBarAction }) {
+export default function ComponentListPage() {
   const { components, setComponents, loading, error, refetch } = useComponents();
   const isOnline = useOnlineStatus();
 
@@ -37,22 +38,6 @@ export default function ComponentListPage({ setTopBarAction }) {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [updatingId, setUpdatingId] = useState(null);
   const [toastError, setToastError] = useState(null);
-
-  // Pasang tombol "+ Tambah" pada TopBar saat halaman katalog aktif
-  useEffect(() => {
-    setTopBarAction?.(
-      <button
-        type="button"
-        className="btn btn--primary btn--sm"
-        onClick={() => setIsFormOpen(true)}
-        disabled={!isOnline}
-      >
-        <Plus size={20} strokeWidth={1.75} aria-hidden="true" />
-        <span>Tambah</span>
-      </button>
-    );
-    return () => setTopBarAction?.(null);
-  }, [setTopBarAction, isOnline]);
 
   // Pemfilteran di sisi browser agar instan pada dataset kecil dan 100% berfungsi saat offline
   const filteredComponents = useMemo(() => {
@@ -78,6 +63,8 @@ export default function ComponentListPage({ setTopBarAction }) {
     try {
       const res = await componentService.updateStock(comp.id, nextStock);
       setComponents((prev) => prev.map((item) => (item.id === comp.id ? res.data : item)));
+      updateComponentInCache(res.data);
+      invalidateProjectsCache();
     } catch (err) {
       setToastError(err?.message || 'Gagal memperbarui stok komponen.');
     } finally {
@@ -88,9 +75,43 @@ export default function ComponentListPage({ setTopBarAction }) {
   return (
     <section className="page">
       <div className="masthead">
-        <h1 className="display">Katalog Komponen</h1>
-        <p className="lede">Cari berdasarkan nama, lokasi laci, atau spesifikasi teknis.</p>
+        <div className="masthead__row">
+          <div>
+            <h1 className="display">Katalog Komponen</h1>
+            <p className="lede">Cari berdasarkan nama, lokasi laci, atau spesifikasi teknis.</p>
+          </div>
+          <button
+            type="button"
+            className={`btn btn--sm ${isFormOpen ? 'btn--outline' : 'btn--primary'}`}
+            onClick={() => setIsFormOpen((prev) => !prev)}
+            disabled={!isOnline}
+          >
+            {isFormOpen ? (
+              <>
+                <X size={20} strokeWidth={1.75} aria-hidden="true" />
+                <span>Tutup Form</span>
+              </>
+            ) : (
+              <>
+                <Plus size={20} strokeWidth={1.75} aria-hidden="true" />
+                <span>Tambah</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
+
+      {isFormOpen && (
+        <div style={{ marginBottom: 16 }}>
+          <ComponentInlineForm
+            onCancel={() => setIsFormOpen(false)}
+            onSaved={() => {
+              setIsFormOpen(false);
+              refetch({ silent: true });
+            }}
+          />
+        </div>
+      )}
 
       <FilterBar
         search={search}
@@ -119,7 +140,7 @@ export default function ComponentListPage({ setTopBarAction }) {
             <AlertTriangle size={20} strokeWidth={1.75} aria-hidden="true" />
             <span>{error}</span>
           </div>
-          <button type="button" className="btn btn--outline" onClick={refetch}>
+          <button type="button" className="btn btn--outline" onClick={() => refetch()}>
             <RefreshCw size={20} strokeWidth={1.75} aria-hidden="true" />
             <span>Coba Lagi</span>
           </button>
@@ -141,13 +162,13 @@ export default function ComponentListPage({ setTopBarAction }) {
               <p>Tidak ada komponen yang cocok dengan filter saat ini.</p>
             </div>
           ) : (
-            <ul className="stock">
+            <ul className="stock stock--components">
               {filteredComponents.map((comp) => {
                 const isBusy = updatingId === comp.id;
                 return (
-                  <li key={comp.id} className="card card--interactive">
+                  <li key={comp.id} className="card card--interactive card--flex">
                     <Link to={`/components/${comp.id}`} className="card-link-area">
-                      <div className="row-between">
+                      <div className="card-head">
                         <span className="card-title">{comp.name}</span>
                         {comp.is_low_stock ? (
                           <span className="chip chip--warn">
@@ -207,7 +228,7 @@ export default function ComponentListPage({ setTopBarAction }) {
       )}
 
       {toastError && (
-        <div className="toast glass toast--error" role="alert">
+        <div className="toast toast--error" role="alert">
           <span>{toastError}</span>
           <button
             type="button"
@@ -219,12 +240,6 @@ export default function ComponentListPage({ setTopBarAction }) {
           </button>
         </div>
       )}
-
-      <ComponentFormModal
-        isOpen={isFormOpen}
-        onClose={() => setIsFormOpen(false)}
-        onSaved={() => refetch()}
-      />
     </section>
   );
 }

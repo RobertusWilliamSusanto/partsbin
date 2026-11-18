@@ -12,12 +12,17 @@ import {
   FolderKanban,
   X,
 } from 'lucide-react';
-import { useComponent } from '../hooks/useComponents';
+import {
+  useComponent,
+  invalidateComponentsCache,
+  updateComponentInCache,
+} from '../hooks/useComponents';
+import { invalidateProjectsCache } from '../hooks/useProjects';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import componentService from '../services/componentService';
 import { formatRupiah } from '../utils/format';
 import ConfirmModal from '../components/modals/ConfirmModal';
-import ComponentFormModal from '../components/modals/ComponentFormModal';
+import ComponentInlineForm from '../components/ComponentInlineForm';
 
 export default function ComponentDetailPage() {
   const { id } = useParams();
@@ -25,7 +30,7 @@ export default function ComponentDetailPage() {
   const isOnline = useOnlineStatus();
   const { component, setComponent, loading, error, refetch } = useComponent(id);
 
-  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [updatingStock, setUpdatingStock] = useState(false);
@@ -42,6 +47,8 @@ export default function ComponentDetailPage() {
       const res = await componentService.updateStock(component.id, nextStock);
       // Pertahankan array used_in_projects agar tidak hilang setelah PATCH stok
       setComponent((prev) => ({ ...prev, ...res.data }));
+      updateComponentInCache(res.data);
+      invalidateProjectsCache();
     } catch (err) {
       setToastError(err?.message || 'Gagal memperbarui stok komponen.');
     } finally {
@@ -55,6 +62,8 @@ export default function ComponentDetailPage() {
     setToastError(null);
     try {
       await componentService.remove(component.id);
+      invalidateComponentsCache();
+      invalidateProjectsCache();
       navigate('/components', { replace: true });
     } catch (err) {
       // Tangani 409 Conflict (ON DELETE RESTRICT) bila komponen masih dipakai di BOM proyek
@@ -87,7 +96,7 @@ export default function ComponentDetailPage() {
             <span>{error || 'Data komponen tidak ditemukan.'}</span>
           </div>
           <div className="row-wrap">
-            <button type="button" className="btn btn--outline" onClick={refetch}>
+            <button type="button" className="btn btn--outline" onClick={() => refetch()}>
               <RefreshCw size={20} strokeWidth={1.75} aria-hidden="true" />
               <span>Coba Lagi</span>
             </button>
@@ -104,128 +113,146 @@ export default function ComponentDetailPage() {
 
   return (
     <section className="page stack-md">
-      <div className="card stack-md">
-        <div className="row-between">
-          <span className="chip chip--neutral">{component.category}</span>
-          {component.is_low_stock ? (
-            <span className="chip chip--warn">
-              <AlertTriangle size={20} strokeWidth={1.75} aria-hidden="true" />
-              <span>Stok Menipis</span>
-            </span>
+      <div className="detail-layout">
+        <div>
+          {isEditing ? (
+            <ComponentInlineForm
+              initialData={component}
+              onCancel={() => setIsEditing(false)}
+              onSaved={(updated) => {
+                setComponent((prev) => ({ ...prev, ...updated }));
+                setIsEditing(false);
+                refetch({ silent: true });
+              }}
+            />
           ) : (
-            <span className="chip chip--ok">
-              <CheckCircle2 size={20} strokeWidth={1.75} aria-hidden="true" />
-              <span>Cukup</span>
-            </span>
+            <div className="card stack-md">
+              <div className="row-between">
+                <span className="chip chip--neutral">{component.category}</span>
+                {component.is_low_stock ? (
+                  <span className="chip chip--warn">
+                    <AlertTriangle size={20} strokeWidth={1.75} aria-hidden="true" />
+                    <span>Stok Menipis</span>
+                  </span>
+                ) : (
+                  <span className="chip chip--ok">
+                    <CheckCircle2 size={20} strokeWidth={1.75} aria-hidden="true" />
+                    <span>Cukup</span>
+                  </span>
+                )}
+              </div>
+
+              <div>
+                <h1 className="display">{component.name}</h1>
+                <div style={{ marginTop: 8 }}>
+                  <span className="mono-badge">Laci: {component.bin_location}</span>
+                </div>
+              </div>
+
+              <div className="spec-grid">
+                <div className="spec-cell">
+                  <span className="spec-cell__label">Harga Satuan</span>
+                  <span className="spec-cell__value num">
+                    {formatRupiah(component.unit_price)}
+                  </span>
+                </div>
+                <div className="spec-cell">
+                  <span className="spec-cell__label">Stok / Minimum</span>
+                  <span className="spec-cell__value num">
+                    {component.stock} / {component.min_stock} pcs
+                  </span>
+                </div>
+              </div>
+
+              <div className="row-between">
+                <span className="form-label">Koreksi Stok Cepat</span>
+                <div className="stepper" aria-label="Atur stok komponen">
+                  <button
+                    type="button"
+                    className="stepper-btn"
+                    onClick={() => handleStepStock(-1)}
+                    disabled={component.stock === 0 || !isOnline || updatingStock}
+                    aria-label="Kurangi stok"
+                  >
+                    <Minus size={20} strokeWidth={1.75} aria-hidden="true" />
+                  </button>
+                  <span className="stepper-val">{component.stock}</span>
+                  <button
+                    type="button"
+                    className="stepper-btn"
+                    onClick={() => handleStepStock(1)}
+                    disabled={!isOnline || updatingStock}
+                    aria-label="Tambah stok"
+                  >
+                    <Plus size={20} strokeWidth={1.75} aria-hidden="true" />
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <div className="spec-cell__label">Spesifikasi Teknis</div>
+                <p className="muted" style={{ marginTop: 4 }}>
+                  {component.specs || 'Belum ada catatan spesifikasi teknis.'}
+                </p>
+              </div>
+
+              <div className="row-wrap">
+                <button
+                  type="button"
+                  className="btn btn--outline"
+                  style={{ flex: 1 }}
+                  onClick={() => setIsEditing(true)}
+                  disabled={!isOnline}
+                >
+                  <Pencil size={20} strokeWidth={1.75} aria-hidden="true" />
+                  <span>Edit</span>
+                </button>
+                <button
+                  type="button"
+                  className="btn btn--danger"
+                  style={{ flex: 1 }}
+                  onClick={() => setIsDeleteOpen(true)}
+                  disabled={!isOnline}
+                >
+                  <Trash2 size={20} strokeWidth={1.75} aria-hidden="true" />
+                  <span>Hapus</span>
+                </button>
+              </div>
+            </div>
           )}
         </div>
 
-        <div>
-          <h1 className="display">{component.name}</h1>
-          <div style={{ marginTop: 8 }}>
-            <span className="mono-badge">Laci: {component.bin_location}</span>
+        <div className="detail-sidebar">
+          <div className="list-head" style={{ paddingTop: 0 }}>
+            <h2>Dipakai di Proyek BOM</h2>
+            <span className="count">{usedInProjects.length} proyek</span>
           </div>
-        </div>
 
-        <div className="spec-grid">
-          <div className="spec-cell">
-            <span className="spec-cell__label">Harga Satuan</span>
-            <span className="spec-cell__value num">{formatRupiah(component.unit_price)}</span>
-          </div>
-          <div className="spec-cell">
-            <span className="spec-cell__label">Stok / Minimum</span>
-            <span className="spec-cell__value num">
-              {component.stock} / {component.min_stock} pcs
-            </span>
-          </div>
+          {usedInProjects.length === 0 ? (
+            <div className="card empty-state">
+              <FolderKanban size={20} strokeWidth={1.75} aria-hidden="true" />
+              <p>Komponen ini belum terdaftar di BOM proyek mana pun.</p>
+            </div>
+          ) : (
+            <ul className="stock">
+              {usedInProjects.map((proj) => (
+                <li key={proj.item_id} className="card card--interactive">
+                  <Link to={`/projects/${proj.project_id}`} className="link-row">
+                    <div className="stack-sm" style={{ minWidth: 0 }}>
+                      <div className="card-title">{proj.project_name}</div>
+                      <div className="count">Kebutuhan BOM: {proj.quantity_needed} pcs</div>
+                    </div>
+                    <ChevronRight size={20} strokeWidth={1.75} aria-hidden="true" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
-
-        <div className="row-between">
-          <span className="form-label">Koreksi Stok Cepat</span>
-          <div className="stepper" aria-label="Atur stok komponen">
-            <button
-              type="button"
-              className="stepper-btn"
-              onClick={() => handleStepStock(-1)}
-              disabled={component.stock === 0 || !isOnline || updatingStock}
-              aria-label="Kurangi stok"
-            >
-              <Minus size={20} strokeWidth={1.75} aria-hidden="true" />
-            </button>
-            <span className="stepper-val">{component.stock}</span>
-            <button
-              type="button"
-              className="stepper-btn"
-              onClick={() => handleStepStock(1)}
-              disabled={!isOnline || updatingStock}
-              aria-label="Tambah stok"
-            >
-              <Plus size={20} strokeWidth={1.75} aria-hidden="true" />
-            </button>
-          </div>
-        </div>
-
-        <div>
-          <div className="spec-cell__label">Spesifikasi Teknis</div>
-          <p className="muted" style={{ marginTop: 4 }}>
-            {component.specs || 'Belum ada catatan spesifikasi teknis.'}
-          </p>
-        </div>
-
-        <div className="row-wrap">
-          <button
-            type="button"
-            className="btn btn--outline"
-            style={{ flex: 1 }}
-            onClick={() => setIsEditOpen(true)}
-            disabled={!isOnline}
-          >
-            <Pencil size={20} strokeWidth={1.75} aria-hidden="true" />
-            <span>Edit</span>
-          </button>
-          <button
-            type="button"
-            className="btn btn--danger"
-            style={{ flex: 1 }}
-            onClick={() => setIsDeleteOpen(true)}
-            disabled={!isOnline}
-          >
-            <Trash2 size={20} strokeWidth={1.75} aria-hidden="true" />
-            <span>Hapus</span>
-          </button>
-        </div>
-      </div>
-
-      <div>
-        <div className="list-head">
-          <h2>Dipakai di Proyek BOM</h2>
-          <span className="count">{usedInProjects.length} proyek</span>
-        </div>
-
-        {usedInProjects.length === 0 ? (
-          <div className="card empty-state">
-            <FolderKanban size={20} strokeWidth={1.75} aria-hidden="true" />
-            <p>Komponen ini belum terdaftar di BOM proyek mana pun.</p>
-          </div>
-        ) : (
-          <ul className="stock">
-            {usedInProjects.map((proj) => (
-              <li key={proj.item_id} className="card card--interactive">
-                <Link to={`/projects/${proj.project_id}`} className="link-row">
-                  <div>
-                    <div className="card-title">{proj.project_name}</div>
-                    <div className="count">Kebutuhan BOM: {proj.quantity_needed} pcs</div>
-                  </div>
-                  <ChevronRight size={20} strokeWidth={1.75} aria-hidden="true" />
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
       </div>
 
       {toastError && (
-        <div className="toast glass toast--error" role="alert">
+        <div className="toast toast--error" role="alert">
           <span>{toastError}</span>
           <button
             type="button"
@@ -237,13 +264,6 @@ export default function ComponentDetailPage() {
           </button>
         </div>
       )}
-
-      <ComponentFormModal
-        isOpen={isEditOpen}
-        initialData={component}
-        onClose={() => setIsEditOpen(false)}
-        onSaved={() => refetch()}
-      />
 
       <ConfirmModal
         isOpen={isDeleteOpen}

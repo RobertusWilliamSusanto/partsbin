@@ -43,7 +43,7 @@ export default function PWABadge() {
         )}
 
         {installPrompt && (
-          <div className="pwa-badge__box glass">
+          <div className="pwa-badge__box">
             <div className="pwa-badge__text">
               <Download size={20} strokeWidth={1.75} aria-hidden="true" />
               <span>Pasang PartsBin di perangkat Anda</span>

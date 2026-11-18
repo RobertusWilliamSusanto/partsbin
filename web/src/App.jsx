@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   BrowserRouter,
   Routes,
@@ -15,6 +14,7 @@ import DashboardPage from './pages/DashboardPage';
 import ComponentListPage from './pages/ComponentListPage';
 import ComponentDetailPage from './pages/ComponentDetailPage';
 import ProjectListPage from './pages/ProjectListPage';
+import ProjectCreatePage from './pages/ProjectCreatePage';
 import ProjectDetailPage from './pages/ProjectDetailPage';
 import ProfilePage from './pages/ProfilePage';
 
@@ -31,6 +31,9 @@ function getRouteMeta(pathname) {
   if (pathname === '/projects') {
     return { title: 'PartsBin', subtitle: 'Proyek & BOM', showBack: false };
   }
+  if (pathname === '/projects/new') {
+    return { title: 'Buat Proyek Baru', subtitle: 'Proyek & BOM Sekaligus', showBack: true };
+  }
   if (pathname.startsWith('/projects/')) {
     return { title: 'Detail Proyek', subtitle: 'Kalkulator BOM', showBack: true };
   }
@@ -43,7 +46,6 @@ function getRouteMeta(pathname) {
 function AppShell() {
   const { pathname } = useLocation();
   const { theme, toggleTheme } = useTheme();
-  const [topBarAction, setTopBarAction] = useState(null);
   const meta = getRouteMeta(pathname);
 
   return (
@@ -52,7 +54,6 @@ function AppShell() {
         title={meta.title}
         subtitle={meta.subtitle}
         showBack={meta.showBack}
-        action={topBarAction}
         theme={theme}
         onToggleTheme={toggleTheme}
       />
@@ -62,15 +63,10 @@ function AppShell() {
       <main className="main">
         <Routes>
           <Route path="/" element={<DashboardPage />} />
-          <Route
-            path="/components"
-            element={<ComponentListPage setTopBarAction={setTopBarAction} />}
-          />
+          <Route path="/components" element={<ComponentListPage />} />
           <Route path="/components/:id" element={<ComponentDetailPage />} />
-          <Route
-            path="/projects"
-            element={<ProjectListPage setTopBarAction={setTopBarAction} />}
-          />
+          <Route path="/projects" element={<ProjectListPage />} />
+          <Route path="/projects/new" element={<ProjectCreatePage />} />
           <Route path="/projects/:id" element={<ProjectDetailPage />} />
           <Route
             path="/profile"

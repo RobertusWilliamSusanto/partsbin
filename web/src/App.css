@@ -1,22 +1,9 @@
 /* ==========================================================================
-   PARTSBIN — LAYOUT MOBILE-FIRST, CLASS DASAR MODUL 4, & KOMPONEN UI
+   PARTSBIN — DUAL-LAYOUT (MOBILE < 768px | DESKTOP >= 768px), CLASS MODUL 4
+   Permukaan solid bebas beban GPU, kontras tinggi, & garis batas 1px tegas.
    ========================================================================== */
 
-/* --- 1. Resep Glassmorphism Terbatas (HANYA elemen melayang) --- */
-.glass {
-  background-color: var(--glass-bg);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
-  border-color: var(--glass-border);
-}
-
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .glass {
-    background-color: var(--surface);
-  }
-}
-
-/* --- 2. Shell & Layout Mobile-First (Class Dasar Modul 4) --- */
+/* --- 1. Shell & Layout Mobile-First (Class Dasar Modul 4) --- */
 .shell {
   min-height: 100dvh;
   display: flex;
@@ -41,6 +28,13 @@
 .masthead {
   border-bottom: 1px solid var(--line);
   margin-bottom: 16px;
+}
+
+.masthead__row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .display {
@@ -98,11 +92,20 @@
   transition: border-color 150ms ease, background-color 150ms ease;
 }
 
+.card--flex {
+  display: flex;
+  flex-direction: column;
+}
+
 .card--interactive:hover {
   border-color: var(--accent);
 }
 
-/* --- 3. Tipografi Presisi & Utilitas Angka --- */
+.inline-form-panel {
+  border-color: var(--accent);
+}
+
+/* --- 2. Tipografi Presisi & Utilitas Flex/Grid --- */
 .mono-badge {
   display: inline-flex;
   align-items: center;
@@ -156,14 +159,17 @@
   gap: 8px;
 }
 
-/* Baris header kartu (judul kiri + chip/aksi kanan): rata atas dan beri ruang lega */
-.row-between:has(.card-title),
-.card-link-area > .row-between:first-child,
-.card > .stack-sm > .row-between:first-child {
+/* Class eksplisit header kartu (menggantikan :has() agar evaluasi CSS lebih ringan) */
+.card-head {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 12px;
+}
+
+.card-head > .card-title {
+  min-width: 0;
+  flex: 1;
 }
 
 .row-wrap {
@@ -173,12 +179,21 @@
   gap: 8px;
 }
 
-/* --- 4. TopBar & BottomNav --- */
+.dashboard-columns,
+.detail-layout,
+.profile-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* --- 3. TopBar (Solid Surface), DesktopNav, & BottomNav (Mobile) --- */
 .top-bar {
   position: sticky;
   top: 0;
   z-index: 20;
-  border-bottom: 1px solid var(--glass-border);
+  background-color: var(--surface);
+  border-bottom: 1px solid var(--border);
 }
 
 .top-bar__inner {
@@ -220,13 +235,19 @@
   flex-shrink: 0;
 }
 
+/* Navigasi desktop disembunyikan pada viewport mobile (< 768px) */
+.desktop-nav {
+  display: none;
+}
+
 .bottom-nav {
   position: fixed;
   left: 0;
   right: 0;
   bottom: 0;
   z-index: 25;
-  border-top: 1px solid var(--glass-border);
+  background-color: var(--surface);
+  border-top: 1px solid var(--border);
   padding-bottom: env(safe-area-inset-bottom);
 }
 
@@ -263,7 +284,7 @@
   border-top-color: var(--accent);
 }
 
-/* --- 5. Buttons & Icon Buttons (Area Sentuh Minimal 44x44px) --- */
+/* --- 4. Buttons & Icon Buttons (Area Sentuh Minimal 44x44px) --- */
 .btn,
 .icon-btn {
   display: inline-flex;
@@ -277,6 +298,8 @@
   border: 1px solid transparent;
   font-size: 0.875rem;
   font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
   cursor: pointer;
   transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease,
     transform 150ms ease, opacity 150ms ease;
@@ -346,7 +369,7 @@
   cursor: not-allowed;
 }
 
-/* --- 6. Chip Status (Warna + Ikon + Teks) --- */
+/* --- 5. Chip Status (Selalu 1 Baris, Warna + Ikon + Teks) --- */
 .chip {
   display: inline-flex;
   align-items: center;
@@ -384,7 +407,7 @@
   color: var(--text-muted);
 }
 
-/* --- 7. Progress Bar Readiness & Stepper Stok --- */
+/* --- 6. Progress Bar Readiness & Stepper Stok --- */
 .readiness-row {
   display: flex;
   align-items: center;
@@ -432,6 +455,7 @@
   border-radius: 8px;
   background-color: var(--surface-2);
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 .stepper-btn {
@@ -465,7 +489,7 @@
   font-weight: 700;
 }
 
-/* --- 8. StatCard Grid (Dashboard 2x2) --- */
+/* --- 7. StatCard Grid (Mobile 2x2) --- */
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -495,7 +519,7 @@
   color: var(--text);
 }
 
-/* --- 9. FilterBar, Forms, PWABadge, & Modals --- */
+/* --- 8. FilterBar, Forms, PWABadge, & ConfirmModal (Solid Surface) --- */
 .filter-bar {
   display: flex;
   flex-direction: column;
@@ -606,6 +630,7 @@
   gap: 12px;
   padding: 10px 12px;
   border-radius: 12px;
+  background-color: var(--surface);
   border: 1px solid var(--border);
 }
 
@@ -640,7 +665,8 @@
   max-height: 90dvh;
   overflow-y: auto;
   border-radius: 16px;
-  border: 1px solid var(--glass-border);
+  background-color: var(--surface);
+  border: 1px solid var(--border);
   padding: 20px;
   box-shadow: var(--shadow-1);
   display: flex;
@@ -685,6 +711,13 @@
   gap: 12px;
 }
 
+.form-grid-desktop,
+.form-grid-3 {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .alert {
   padding: 12px;
   border-radius: 8px;
@@ -718,7 +751,7 @@
   gap: 8px;
 }
 
-/* --- 10. Toast Melayang (.glass) & Detail Grid Komponen/BOM --- */
+/* --- 9. Toast, Detail Grid, & BOM Builder --- */
 .toast {
   position: fixed;
   left: 50%;
@@ -728,7 +761,8 @@
   z-index: 50;
   padding: 12px 16px;
   border-radius: 12px;
-  border: 1px solid var(--glass-border);
+  background-color: var(--surface);
+  border: 1px solid var(--border);
   box-shadow: var(--shadow-1);
   display: flex;
   align-items: center;
@@ -763,11 +797,6 @@
   line-height: 1.3;
   min-width: 0;
   overflow-wrap: break-word;
-}
-
-.row-between > .card-title {
-  min-width: 0;
-  flex: 1;
 }
 
 .card-divider {
@@ -832,3 +861,152 @@
   flex-shrink: 0;
 }
 
+.bom-builder-card {
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background-color: var(--surface-2);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bom-builder-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bom-builder-row__select {
+  flex: 1;
+  min-width: 0;
+}
+
+.bom-builder-row__qty {
+  width: 76px;
+  flex-shrink: 0;
+}
+
+/* ==========================================================================
+   DUAL-LAYOUT DESKTOP (>= 768px & >= 1024px) — Mobile < 768px tidak disentuh
+   ========================================================================== */
+@media (min-width: 768px) {
+  .main,
+  .top-bar__inner,
+  .pwa-badge {
+    max-width: 1040px;
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+
+  .main {
+    padding-bottom: 40px;
+  }
+
+  .bottom-nav {
+    display: none;
+  }
+
+  .desktop-nav {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .desktop-nav__link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 0 14px;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    transition: color 150ms ease, background-color 150ms ease;
+  }
+
+  .desktop-nav__link:hover {
+    color: var(--text);
+    background-color: var(--surface-2);
+  }
+
+  .desktop-nav__link.active {
+    color: var(--accent);
+    background-color: var(--surface-2);
+  }
+
+  .stat-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+
+  .stat-card {
+    padding: 16px;
+  }
+
+  .dashboard-columns {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    align-items: start;
+  }
+
+  .stock--components,
+  .stock--projects {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+
+  .detail-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+    gap: 20px;
+    align-items: start;
+  }
+
+  .detail-sidebar {
+    position: sticky;
+    top: 76px;
+  }
+
+  .profile-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    align-items: start;
+  }
+
+  .form-grid-desktop {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 12px;
+  }
+
+  .form-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+
+  .search-wrap {
+    max-width: 420px;
+  }
+
+  .filter-pills {
+    flex-wrap: wrap;
+    overflow-x: visible;
+    padding-bottom: 0;
+  }
+
+  .toast {
+    bottom: 24px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .stock--components {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
