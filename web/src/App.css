@@ -156,6 +156,16 @@
   gap: 8px;
 }
 
+/* Baris header kartu (judul kiri + chip/aksi kanan): rata atas dan beri ruang lega */
+.row-between:has(.card-title),
+.card-link-area > .row-between:first-child,
+.card > .stack-sm > .row-between:first-child {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
 .row-wrap {
   display: flex;
   align-items: center;
@@ -346,6 +356,12 @@
   font-size: 0.75rem;
   font-weight: 700;
   line-height: 1.2;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.chip svg {
+  flex-shrink: 0;
 }
 
 .chip--ok {
@@ -745,6 +761,13 @@
   font-weight: 700;
   color: var(--text);
   line-height: 1.3;
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
+.row-between > .card-title {
+  min-width: 0;
+  flex: 1;
 }
 
 .card-divider {
@@ -798,5 +821,14 @@
   justify-content: space-between;
   gap: 12px;
   min-height: 44px;
+}
+
+.link-row > .stack-sm {
+  flex: 1;
+  min-width: 0;
+}
+
+.link-row > svg {
+  flex-shrink: 0;
 }
 
