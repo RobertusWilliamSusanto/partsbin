@@ -1,0 +1,20 @@
+{
+  "name": "partsbin-api",
+  "version": "1.0.0",
+  "description": "Backend REST API PartsBin - Katalog Komponen Mikro & Kalkulator BOM Proyek Elektronika",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.113.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}

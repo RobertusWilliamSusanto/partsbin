@@ -1,0 +1,157 @@
+@baseUrl = http://localhost:3000/api
+@seedCompId = 11111111-1111-4111-8111-111111111101
+@seedProjId = 22222222-2222-4222-8222-222222222202
+@missingUuid = 99999999-9999-4999-8999-999999999999
+
+### ============================================================================
+### SKENARIO POSITIF — 14 ENDPOINT REST API PARTSBIN
+### ============================================================================
+
+### 1. GET /api/health (200)
+GET {{baseUrl}}/health
+
+### 2. GET /api/components (200)
+GET {{baseUrl}}/components
+
+### 3. GET /api/components/:id (200)
+GET {{baseUrl}}/components/{{seedCompId}}
+
+### 4. POST /api/components (201)
+# @name createComponent
+POST {{baseUrl}}/components
+Content-Type: application/json
+
+{
+  "name": "Header Pin Male 1x40 2.54mm",
+  "category": "Connector",
+  "stock": 15,
+  "min_stock": 5,
+  "unit_price": 2500,
+  "bin_location": "G-01",
+  "specs": "Pitch 2.54mm, breakaway straight pin header"
+}
+
+@newCompId = {{createComponent.response.body.data.id}}
+
+### 5. PUT /api/components/:id (200 — payload wajib lengkap)
+PUT {{baseUrl}}/components/{{newCompId}}
+Content-Type: application/json
+
+{
+  "name": "Header Pin Male 1x40 2.54mm Gold",
+  "category": "Connector",
+  "stock": 20,
+  "min_stock": 5,
+  "unit_price": 3000,
+  "bin_location": "G-02",
+  "specs": "Pitch 2.54mm, gold plated breakaway pin header"
+}
+
+### 6. PATCH /api/components/:id/stock (200 — stepper stok)
+PATCH {{baseUrl}}/components/{{newCompId}}/stock
+Content-Type: application/json
+
+{
+  "stock": 18
+}
+
+### 8. GET /api/projects (200)
+GET {{baseUrl}}/projects
+
+### 9. GET /api/projects/:id (200 — termasuk kalkulator BOM & shopping_list)
+GET {{baseUrl}}/projects/{{seedProjId}}
+
+### 10. POST /api/projects (201)
+# @name createProject
+POST {{baseUrl}}/projects
+Content-Type: application/json
+
+{
+  "name": "Tester Kabel Jumper Otomatis",
+  "description": "Alat uji kontinuitas kabel breadboard 8 kanal."
+}
+
+@newProjId = {{createProject.response.body.data.id}}
+
+### 11. PUT /api/projects/:id (200)
+PUT {{baseUrl}}/projects/{{newProjId}}
+Content-Type: application/json
+
+{
+  "name": "Tester Kabel Jumper Otomatis v2",
+  "description": "Alat uji kontinuitas kabel breadboard 8 kanal dengan indikator LED."
+}
+
+### 13. POST /api/projects/:id/items (201 — tambah item BOM)
+# @name addBomItem
+POST {{baseUrl}}/projects/{{newProjId}}/items
+Content-Type: application/json
+
+{
+  "component_id": "{{newCompId}}",
+  "quantity_needed": 2
+}
+
+@newItemId = {{addBomItem.response.body.data.id}}
+
+### 14. DELETE /api/projects/:id/items/:itemId (200 — hapus item BOM)
+DELETE {{baseUrl}}/projects/{{newProjId}}/items/{{newItemId}}
+
+### 12. DELETE /api/projects/:id (200 — hapus proyek baru)
+DELETE {{baseUrl}}/projects/{{newProjId}}
+
+### 7. DELETE /api/components/:id (200 — hapus komponen baru yang sudah tidak dipakai BOM)
+DELETE {{baseUrl}}/components/{{newCompId}}
+
+### ============================================================================
+### SKENARIO NEGATIF — VALIDASI & ERROR HANDLER
+### ============================================================================
+
+### N1. POST /api/components tanpa body (400 — uji guard req.body ?? {})
+POST {{baseUrl}}/components
+
+### N2. PATCH /api/components/:id/stock dengan stok negatif (400)
+PATCH {{baseUrl}}/components/{{seedCompId}}/stock
+Content-Type: application/json
+
+{
+  "stock": -5
+}
+
+### N3. PATCH /api/components/:id/stock dengan angka desimal (400 — uji parseIntStrict)
+PATCH {{baseUrl}}/components/{{seedCompId}}/stock
+Content-Type: application/json
+
+{
+  "stock": 1.5
+}
+
+### N4. GET /api/components/:id dengan format UUID tidak valid (400 — PG 22P02)
+GET {{baseUrl}}/components/bukan-uuid
+
+### N5. GET /api/components/:id dengan UUID tidak ada di DB (404 — PGRST116)
+GET {{baseUrl}}/components/{{missingUuid}}
+
+### N6. DELETE /api/components/:id dengan UUID tidak ada di DB (404 — uji .delete().select())
+DELETE {{baseUrl}}/components/{{missingUuid}}
+
+### N7. DELETE /api/components/:id komponen yang masih dipakai di BOM proyek (409 — ON DELETE RESTRICT)
+DELETE {{baseUrl}}/components/{{seedCompId}}
+
+### N8. POST /api/projects/:id/items duplikat komponen di proyek yang sama (409 — UNIQUE constraint)
+POST {{baseUrl}}/projects/{{seedProjId}}/items
+Content-Type: application/json
+
+{
+  "component_id": "{{seedCompId}}",
+  "quantity_needed": 1
+}
+
+### N9. POST /api/projects/:id/items dengan component_id tidak ada (404 — PG 23503 non-DELETE)
+POST {{baseUrl}}/projects/{{seedProjId}}/items
+Content-Type: application/json
+
+{
+  "component_id": "{{missingUuid}}",
+  "quantity_needed": 1
+}

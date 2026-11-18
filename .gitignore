@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+
+# Environment variables (secret tidak boleh ter-commit ke Git)
+.env
+.env.*
+!**/.env.example
+
+# Build outputs & PWA dev cache
+dist/
+dev-dist/
+
+# Vercel deployment metadata
+.vercel/
+
+# Referensi praktikum & folder acuan prompt lokal
+_referensi/
+folder_acuan/
+
+# OS & log files
+.DS_Store
+Thumbs.db
+*.log
