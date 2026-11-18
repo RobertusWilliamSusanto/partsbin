@@ -40,6 +40,8 @@ export function hasComponentDraft() {
   return loadComponentDraft() !== null;
 }
 
+export const hasDraft = hasComponentDraft;
+
 export function formatDraftTime(isoString) {
   if (!isoString) return '';
   const date = new Date(isoString);
