@@ -1,27 +1,24 @@
 import { useState, useEffect, useCallback } from 'react';
 import projectService from '../services/projectService';
+import {
+  getProjectsListCache,
+  setProjectsListCache,
+  getProjectDetailCache,
+  setProjectDetailCache,
+  invalidateProjectsCache,
+} from '../utils/dataCache';
 
-// In-memory cache module-level (stale-while-revalidate) agar pindah tab instan tanpa flicker
-let projectsListCache = null;
-const projectDetailCache = new Map();
+export { invalidateProjectsCache };
 
-export function invalidateProjectsCache(id) {
-  projectsListCache = null;
-  if (id) {
-    projectDetailCache.delete(id);
-  } else {
-    projectDetailCache.clear();
-  }
-}
-
+// Custom hook daftar proyek dengan stale-while-revalidate & invalidasi lintas-hook otomatis
 export function useProjects() {
-  const [projects, setProjects] = useState(() => projectsListCache ?? []);
-  const [loading, setLoading] = useState(() => projectsListCache === null);
+  const [projects, setProjects] = useState(() => getProjectsListCache() ?? []);
+  const [loading, setLoading] = useState(() => getProjectsListCache() === null);
   const [error, setError] = useState(null);
   const [reloadKey, setReloadKey] = useState(0);
 
   const refetch = useCallback(({ silent = false } = {}) => {
-    if (!silent && projectsListCache === null) {
+    if (!silent && getProjectsListCache() === null) {
       setLoading(true);
     }
     setError(null);
@@ -34,14 +31,14 @@ export function useProjects() {
       .getAll()
       .then((res) => {
         const list = Array.isArray(res?.data) ? res.data : [];
-        projectsListCache = list;
+        setProjectsListCache(list);
         if (active) {
           setProjects(list);
           setError(null);
         }
       })
       .catch((err) => {
-        if (active && projectsListCache === null) {
+        if (active && getProjectsListCache() === null) {
           setError(err?.message || 'Gagal memuat daftar proyek.');
         }
       })
@@ -58,7 +55,7 @@ export function useProjects() {
 }
 
 export function useProject(id) {
-  const cached = id ? projectDetailCache.get(id) ?? null : null;
+  const cached = getProjectDetailCache(id);
   const [project, setProject] = useState(() => cached);
   const [loading, setLoading] = useState(() => cached === null);
   const [error, setError] = useState(null);
@@ -66,7 +63,7 @@ export function useProject(id) {
 
   const refetch = useCallback(
     ({ silent = false } = {}) => {
-      if (!silent && !projectDetailCache.has(id)) {
+      if (!silent && getProjectDetailCache(id) === null) {
         setLoading(true);
       }
       setError(null);
@@ -82,14 +79,14 @@ export function useProject(id) {
       .getById(id)
       .then((res) => {
         const data = res?.data || null;
-        if (data) projectDetailCache.set(id, data);
+        if (data) setProjectDetailCache(id, data);
         if (active) {
           setProject(data);
           setError(null);
         }
       })
       .catch((err) => {
-        if (active && !projectDetailCache.has(id)) {
+        if (active && getProjectDetailCache(id) === null) {
           setError(err?.message || 'Gagal memuat detail proyek.');
         }
       })
@@ -102,5 +99,8 @@ export function useProject(id) {
     };
   }, [id, reloadKey]);
 
-  return { project, setProject, loading, error, refetch };
+  const activeProject = project?.id === id ? project : cached;
+  const isInitialLoading = loading && !activeProject;
+
+  return { project: activeProject, setProject, loading: isInitialLoading, error, refetch };
 }
