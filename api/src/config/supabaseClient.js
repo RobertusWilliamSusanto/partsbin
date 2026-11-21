@@ -6,7 +6,10 @@ import { createClient } from '@supabase/supabase-js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Muat .env baik saat server dijalankan dari direktori root repo maupun langsung dari api/
+// Muat .env baik saat server dijalankan dari direktori root repo maupun langsung dari api/.
+// Kenapa fallback path ditambahkan? Di monorepo, perintah bisa dijalankan dari root maupun folder api/.
+// Pada lingkungan Vercel serverless, env var diinjeksi langsung ke process.env sistem (tanpa berkas .env fisik),
+// sehingga dotenv.config() otomatis dilewati dan aman dari error.
 dotenv.config();
 if (!process.env.SUPABASE_URL || !process.env.SUPABASE_KEY) {
   dotenv.config({ path: path.resolve(__dirname, '../../.env') });

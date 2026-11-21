@@ -153,7 +153,7 @@ partsbin/
 | Kode | Aturan Wajib Asprak | Status Verifikasi | Bukti Implementasi di Aplikasi |
 | :---: | :--- | :---: | :--- |
 | **R1** | Tugas individu | MANUAL OLEH PRAKTIKAN | Pengerjaan mandiri oleh Robertus William Susanto (NIM: 21120124120007). |
-| **R2** | Platform: Progressive Web App / PWA (`React` + `Vite` + `vite-plugin-pwa`, service worker, manifest, installable, offline runtime caching) | TERVERIFIKASI (KODE + DEPLOY) | `web/vite.config.js` (`VitePWA`, Workbox runtimeCaching), `web/src/components/PWABadge.jsx`, `web/index.html` (manifest + theme-color), verifikasi installable di Chrome/Edge DevTools. |
+| **R2** | Platform: Progressive Web App / PWA (`React` + `Vite` + `vite-plugin-pwa`, service worker, manifest, installable, offline runtime caching) | MENUNGGU TAHAP 5 | Ikon PWA (`icon-192.png`, `icon-512.png`), `vite-plugin-pwa`, dan service worker `dist/sw.js` dikonfigurasi pada Tahap 5. |
 | **R3** | Memakai REST API (web service) buatan sendiri mengikuti arsitektur Modul 1 (`Express 5` + `Supabase`, folder `api/src/{config,routes,controllers,models}`, requests.http ada, web/src bersih dari supabase-js) | TERVERIFIKASI (KODE) | `api/src/config/supabaseClient.js`, `api/src/routes/`, `api/src/controllers/`, `api/src/models/`, `api/src/middlewares/errorHandler.js`, `api/requests.http`, `web/src/` bebas dari `@supabase/supabase-js`. |
 | **R4** | Memiliki *Bottom Navigation Bar* (*mobile-first*) yang terpasang konsisten di seluruh rute utama | TERVERIFIKASI (KODE) | `web/src/components/BottomNav.jsx` (tampil `< 768px`), `web/src/components/TopBar.jsx` (navigasi horizontal `>= 768px`), `web/src/App.css`. |
 | **R5** | Minimal 5 halaman fungsional (PartsBin memiliki 6 rute halaman fungsional) | TERVERIFIKASI (KODE) | `web/src/App.jsx`: `/`, `/components`, `/components/:id`, `/calculator`, `/projects/:id`, `/profile`. |
@@ -162,7 +162,7 @@ partsbin/
 | **R8** | Seluruh *source code* wajib tersimpan di repositori GitHub publik | MENUNGGU PUSH (MANUAL OLEH PRAKTIKAN) | https://github.com/RobertusWilliamSusanto/partsbin (menunggu push manual oleh praktikan ke branch `main`). |
 | **R9** | Judul dan topik tidak boleh sama dengan praktikan lain di platform yang sama | MANUAL OLEH PRAKTIKAN | Topik: Katalog Komponen Mikro & Kalkulator BOM Proyek Elektronika. |
 | **R10** | Mengikuti asistensi minimal 1x dan mengisi lembar asistensi | MANUAL OLEH PRAKTIKAN | Dijadwalkan sebelum batas akhir asistensi. |
-| **R11** | PWA wajib di-deploy di free hosting (Vercel); tautan repositori dicantumkan di kolom GitHub | TERVERIFIKASI (KODE + DEPLOY) | Frontend: https://partsbin-web.vercel.app ; Backend: https://partsbin-api.vercel.app/api. |
+| **R11** | PWA wajib di-deploy di free hosting (Vercel); tautan repositori dicantumkan di kolom GitHub | MENUNGGU DEPLOY | `web/vercel.json` dan deploy produksi 2 project di Vercel dikerjakan setelah pengerjaan frontend tuntas. |
 | **R12** | Rentang pengerjaan 13–24 Nov 2026, responsi 25–28 Nov 2026; dilarang Protect Cell sebelum memiliki judul | MANUAL OLEH PRAKTIKAN | Jadwal pengerjaan dipatuhi oleh praktikan. |
 
 ---
@@ -212,7 +212,7 @@ curl -s -X PATCH http://localhost:3000/api/components/UUID_KOMPONEN/stock -H "Co
    - `PORT=3000`
    - `SUPABASE_URL=https://project-id.supabase.co`
    - `SUPABASE_KEY=supabase-anon-key`
-   - `FRONTEND_URL=http://localhost:5173,https://partsbin-web.vercel.app`
+   - `CORS_ORIGINS=http://localhost:5173,https://partsbin-web.vercel.app` (atau `FRONTEND_URL`)
 2. Jalankan:
    ```text
    cd api

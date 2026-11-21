@@ -8,8 +8,9 @@ import { errorHandler } from './middlewares/errorHandler.js';
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 
-// Daftar origin frontend yang diizinkan mengakses API (mendukung beberapa URL dipisahkan koma)
-const configuredOrigins = (process.env.FRONTEND_URL || '')
+// Daftar origin frontend yang diizinkan mengakses API (mendukung CORS_ORIGINS atau FRONTEND_URL, dipisahkan koma)
+const envOrigins = process.env.CORS_ORIGINS || process.env.FRONTEND_URL || '';
+const configuredOrigins = envOrigins
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean);

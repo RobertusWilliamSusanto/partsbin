@@ -11,8 +11,10 @@ html[data-theme='light'] {
   --text: #0f172a;
   --text-muted: #475569;
   --border: #cbd5e1;
+  --border-strong: #64748b;
   --accent: #1d4ed8;
   --accent-contrast: #ffffff;
+  --accent-tint: #dbeafe;
   --ok: #15803d;
   --ok-tint: #dcfce7;
   --warn: #b45309;
@@ -22,6 +24,14 @@ html[data-theme='light'] {
   --glass-bg: rgba(255, 255, 255, 0.86);
   --glass-border: rgba(15, 23, 42, 0.12);
   --shadow-1: 0 1px 3px rgba(15, 23, 42, 0.06);
+
+  /* Status Progres Proyek */
+  --status-planned: #475569;
+  --status-planned-bg: #f1f5f9;
+  --status-progress: #1d4ed8;
+  --status-progress-bg: #eff6ff;
+  --status-done: #15803d;
+  --status-done-bg: #dcfce7;
 
   /* Alias kompatibilitas class Modul 4 */
   --paper: var(--bg);
@@ -41,8 +51,10 @@ html[data-theme='dark'] {
   --text: #f1f5f9;
   --text-muted: #94a3b8;
   --border: #334155;
+  --border-strong: #64748b;
   --accent: #60a5fa;
   --accent-contrast: #0b0f17;
+  --accent-tint: #172554;
   --ok: #4ade80;
   --ok-tint: #052e16;
   --warn: #fbbf24;
@@ -52,6 +64,14 @@ html[data-theme='dark'] {
   --glass-bg: rgba(17, 24, 39, 0.86);
   --glass-border: rgba(241, 245, 249, 0.12);
   --shadow-1: none;
+
+  /* Status Progres Proyek */
+  --status-planned: #94a3b8;
+  --status-planned-bg: #1e293b;
+  --status-progress: #60a5fa;
+  --status-progress-bg: #172554;
+  --status-done: #4ade80;
+  --status-done-bg: #052e16;
 }
 
 *,

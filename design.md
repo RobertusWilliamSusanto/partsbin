@@ -29,6 +29,7 @@ html[data-theme='light'] {
   --text: #0f172a;
   --text-muted: #475569;
   --border: #cbd5e1;
+  --border-strong: #64748b;
   --accent: #1d4ed8;
   --accent-contrast: #ffffff;
   --accent-tint: #dbeafe;
@@ -68,6 +69,7 @@ html[data-theme='dark'] {
   --text: #f1f5f9;
   --text-muted: #94a3b8;
   --border: #334155;
+  --border-strong: #64748b;
   --accent: #60a5fa;
   --accent-contrast: #0b0f17;
   --accent-tint: #172554;
@@ -105,6 +107,11 @@ html[data-theme='dark'] {
 | Chip `planned` di atas `planned-bg` | `#475569` / `#f1f5f9` (6.92:1) | `#94a3b8` / `#1e293b` (5.71:1) | AA |
 | Chip `in_progress` di atas `progress-bg` | `#1d4ed8` / `#eff6ff` (6.16:1) | `#60a5fa` / `#172554` (5.78:1) | AA |
 | Chip `done` di atas `done-bg` | `#15803d` / `#dcfce7` (4.57:1) | `#4ade80` / `#052e16` (8.55:1) | AA |
+| **Kontras Non-Teks (WCAG 1.4.11 >= 3:1)** | | | |
+| `border-strong` kontrol interaktif vs `surface` | `#64748b` / `#ffffff` (4.76:1) | `#64748b` / `#111827` (3.73:1) | PASS (>= 3:1) |
+| `border-strong` kontrol interaktif vs `bg` | `#64748b` / `#f8fafc` (4.55:1) | `#64748b` / `#0b0f17` (4.03:1) | PASS (>= 3:1) |
+| Focus ring `accent` vs `surface` | `#1d4ed8` / `#ffffff` (6.70:1) | `#60a5fa` / `#111827` (6.98:1) | PASS (>= 3:1) |
+| Focus ring `accent` vs `bg` | `#1d4ed8` / `#f8fafc` (6.41:1) | `#60a5fa` / `#0b0f17` (7.54:1) | PASS (>= 3:1) |
 
 ---
 
