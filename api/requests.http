@@ -4,7 +4,7 @@
 @missingUuid = 99999999-9999-4999-8999-999999999999
 
 ### ============================================================================
-### SKENARIO POSITIF — 14 ENDPOINT REST API PARTSBIN
+### SKENARIO POSITIF — 16 ENDPOINT REST API PARTSBIN (v4.0)
 ### ============================================================================
 
 ### 1. GET /api/health (200)
@@ -55,25 +55,32 @@ Content-Type: application/json
   "stock": 18
 }
 
-### 8. GET /api/projects (200)
+### 8. GET /api/projects (200 — memuat status, image_url, & ringkasan BOM)
 GET {{baseUrl}}/projects
 
-### 9. GET /api/projects/:id (200 — termasuk kalkulator BOM & shopping_list)
+### 9. GET /api/projects/:id (200 — termasuk image_url, kalkulator BOM & shopping_list)
 GET {{baseUrl}}/projects/{{seedProjId}}
 
-### 10. POST /api/projects (201)
+### 10. POST /api/projects (201 — mendukung status dan items[] BOM sekaligus)
 # @name createProject
 POST {{baseUrl}}/projects
 Content-Type: application/json
 
 {
   "name": "Tester Kabel Jumper Otomatis",
-  "description": "Alat uji kontinuitas kabel breadboard 8 kanal."
+  "description": "Alat uji kontinuitas kabel breadboard 8 kanal.",
+  "status": "planned",
+  "items": [
+    {
+      "component_id": "{{newCompId}}",
+      "quantity_needed": 2
+    }
+  ]
 }
 
 @newProjId = {{createProject.response.body.data.id}}
 
-### 11. PUT /api/projects/:id (200)
+### 11. PUT /api/projects/:id (200 — perbarui nama & deskripsi)
 PUT {{baseUrl}}/projects/{{newProjId}}
 Content-Type: application/json
 
@@ -82,14 +89,35 @@ Content-Type: application/json
   "description": "Alat uji kontinuitas kabel breadboard 8 kanal dengan indikator LED."
 }
 
-### 13. POST /api/projects/:id/items (201 — tambah item BOM)
+### 15. PATCH /api/projects/:id/status (200 — perbarui status pengerjaan)
+PATCH {{baseUrl}}/projects/{{newProjId}}/status
+Content-Type: application/json
+
+{
+  "status": "in_progress"
+}
+
+### 16. POST /api/projects/:id/image (200 — unggah foto proyek multipart)
+# Catatan: Jalankan via form upload browser / curl untuk multipart biner nyata:
+# curl -X POST -F "image=@sample.jpg" {{baseUrl}}/projects/{{newProjId}}/image
+POST {{baseUrl}}/projects/{{newProjId}}/image
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryPartsBin
+
+------WebKitFormBoundaryPartsBin
+Content-Disposition: form-data; name="image"; filename="sample.jpg"
+Content-Type: image/jpeg
+
+< ./sample.jpg
+------WebKitFormBoundaryPartsBin--
+
+### 13. POST /api/projects/:id/items (201 — tambah item BOM manual)
 # @name addBomItem
 POST {{baseUrl}}/projects/{{newProjId}}/items
 Content-Type: application/json
 
 {
-  "component_id": "{{newCompId}}",
-  "quantity_needed": 2
+  "component_id": "{{seedCompId}}",
+  "quantity_needed": 1
 }
 
 @newItemId = {{addBomItem.response.body.data.id}}
@@ -97,14 +125,14 @@ Content-Type: application/json
 ### 14. DELETE /api/projects/:id/items/:itemId (200 — hapus item BOM)
 DELETE {{baseUrl}}/projects/{{newProjId}}/items/{{newItemId}}
 
-### 12. DELETE /api/projects/:id (200 — hapus proyek baru)
+### 12. DELETE /api/projects/:id (200 — hapus proyek baru dan berkas storage)
 DELETE {{baseUrl}}/projects/{{newProjId}}
 
-### 7. DELETE /api/components/:id (200 — hapus komponen baru yang sudah tidak dipakai BOM)
+### 7. DELETE /api/components/:id (200 — hapus komponen yang sudah dilepas dari BOM)
 DELETE {{baseUrl}}/components/{{newCompId}}
 
 ### ============================================================================
-### SKENARIO NEGATIF — VALIDASI & ERROR HANDLER
+### SKENARIO NEGATIF — VALIDASI & ERROR HANDLER (v4.0)
 ### ============================================================================
 
 ### N1. POST /api/components tanpa body (400 — uji guard req.body ?? {})
@@ -154,4 +182,64 @@ Content-Type: application/json
 {
   "component_id": "{{missingUuid}}",
   "quantity_needed": 1
+}
+
+### N10. PATCH /api/projects/:id/status dengan status di luar enum (400 — validasi enum)
+PATCH {{baseUrl}}/projects/{{seedProjId}}/status
+Content-Type: application/json
+
+{
+  "status": "pending_review"
+}
+
+### N11. PATCH /api/projects/:id/status untuk ID proyek tidak ada (404 — PGRST116)
+PATCH {{baseUrl}}/projects/{{missingUuid}}/status
+Content-Type: application/json
+
+{
+  "status": "done"
+}
+
+### N12. POST /api/projects/:id/image tanpa melampirkan berkas (400 — req.file kosong)
+POST {{baseUrl}}/projects/{{seedProjId}}/image
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryPartsBin
+
+------WebKitFormBoundaryPartsBin--
+
+### N13. POST /api/projects/:id/image untuk ID proyek tidak ada (404)
+POST {{baseUrl}}/projects/{{missingUuid}}/image
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryPartsBin
+
+------WebKitFormBoundaryPartsBin
+Content-Disposition: form-data; name="image"; filename="test.jpg"
+Content-Type: image/jpeg
+
+fake-jpeg-data
+------WebKitFormBoundaryPartsBin--
+
+### N14. POST /api/projects dengan duplikat item BOM (409 — validasi sebelum insert)
+POST {{baseUrl}}/projects
+Content-Type: application/json
+
+{
+  "name": "Proyek Uji Duplikat",
+  "description": "Membuktikan penolakan duplikat komponen",
+  "status": "planned",
+  "items": [
+    { "component_id": "{{seedCompId}}", "quantity_needed": 1 },
+    { "component_id": "{{seedCompId}}", "quantity_needed": 2 }
+  ]
+}
+
+### N15. POST /api/projects dengan component_id tidak ada (404 — uji compensating delete)
+POST {{baseUrl}}/projects
+Content-Type: application/json
+
+{
+  "name": "Proyek Uji Compensating Delete",
+  "description": "Proyek ini harus otomatis terhapus saat insert item gagal",
+  "status": "planned",
+  "items": [
+    { "component_id": "{{missingUuid}}", "quantity_needed": 1 }
+  ]
 }

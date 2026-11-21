@@ -1,5 +1,11 @@
-import { projectModel } from '../models/projectModel.js';
+import crypto from 'node:crypto';
+import { supabase } from '../config/supabaseClient.js';
+import { projectModel, getImageUrl } from '../models/projectModel.js';
 import { projectItemModel } from '../models/projectItemModel.js';
+import { detectImageFormatFromBuffer } from '../middlewares/upload.js';
+
+const ALLOWED_STATUS = new Set(['planned', 'in_progress', 'done']);
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function parseIntStrict(val) {
   if (typeof val !== 'number' && typeof val !== 'string') return null;
@@ -8,7 +14,6 @@ function parseIntStrict(val) {
   return Number.isInteger(num) ? num : null;
 }
 
-// Kalkulator BOM inti: menghitung readiness %, total biaya BOM, dan shopping_list kekurangan stok
 function calculateBomAnalytics(projectItems = []) {
   const items = projectItems.map((item) => {
     const comp = item.components || {};
@@ -64,23 +69,32 @@ function calculateBomAnalytics(projectItems = []) {
   };
 }
 
-function validateProjectPayload(body) {
-  const name = typeof body.name === 'string' ? body.name.trim() : '';
-  if (!name || name.length > 120) {
-    return { error: 'Nama proyek wajib diisi (maksimal 120 karakter).' };
-  }
-  if (body.description !== undefined && typeof body.description !== 'string') {
-    return { error: 'Deskripsi proyek harus berupa teks.' };
-  }
-  return {
-    payload: {
-      name,
-      description: typeof body.description === 'string' ? body.description.trim() : '',
-    },
-  };
-}
-
 export const projectController = {
+  // Middleware pra-cek: Validasi format UUID dan pastikan proyek ada di DB sebelum upload file
+  async checkProjectExistsBeforeUpload(req, res, next) {
+    const { id } = req.params;
+    if (!UUID_REGEX.test(id)) {
+      return res.status(400).json({ error: 'Format UUID proyek tidak valid.' });
+    }
+
+    try {
+      const { data: project, error } = await supabase
+        .from('projects')
+        .select('id, name, description, status, image_path, created_at')
+        .eq('id', id)
+        .single();
+
+      if (error || !project) {
+        return res.status(404).json({ error: 'Proyek tidak ditemukan.' });
+      }
+
+      req.targetProject = project;
+      return next();
+    } catch (err) {
+      return next(err);
+    }
+  },
+
   async getAll(_req, res, next) {
     try {
       const projects = await projectModel.getAll();
@@ -112,22 +126,82 @@ export const projectController = {
   },
 
   async create(req, res, next) {
-    // Guard Express 5: req.body bisa bernilai undefined bila request dikirim tanpa body
     const body = req.body ?? {};
-    const { payload, error } = validateProjectPayload(body);
-    if (error) return res.status(400).json({ error });
+    const name = typeof body.name === 'string' ? body.name.trim() : '';
+    if (!name || name.length > 120) {
+      return res.status(400).json({ error: 'Nama proyek wajib diisi (maksimal 120 karakter).' });
+    }
+    if (body.description !== undefined && typeof body.description !== 'string') {
+      return res.status(400).json({ error: 'Deskripsi proyek harus berupa teks.' });
+    }
 
+    let status = 'planned';
+    if (body.status !== undefined) {
+      if (typeof body.status !== 'string' || !ALLOWED_STATUS.has(body.status.trim())) {
+        return res.status(400).json({ error: "Status proyek tidak valid. Pilihan: 'planned', 'in_progress', 'done'." });
+      }
+      status = body.status.trim();
+    }
+
+    const payload = {
+      name,
+      description: typeof body.description === 'string' ? body.description.trim() : '',
+      status,
+    };
+
+    const rawItems = Array.isArray(body.items) ? body.items : [];
+    const validatedItems = [];
+    const seenCompIds = new Set();
+
+    for (const item of rawItems) {
+      const compId = typeof item?.component_id === 'string' ? item.component_id.trim() : '';
+      if (!compId) {
+        return res.status(400).json({ error: 'Setiap item BOM wajib menyertakan component_id.' });
+      }
+      if (seenCompIds.has(compId)) {
+        return res.status(409).json({ error: 'Terdapat komponen duplikat di dalam daftar BOM.' });
+      }
+      seenCompIds.add(compId);
+
+      const qty = parseIntStrict(item.quantity_needed);
+      if (qty === null || qty <= 0) {
+        return res.status(400).json({ error: 'Jumlah kebutuhan komponen pada BOM wajib bilangan bulat > 0.' });
+      }
+      validatedItems.push({ component_id: compId, quantity_needed: qty });
+    }
+
+    let createdProject = null;
     try {
-      const created = await projectModel.create(payload);
+      createdProject = await projectModel.create(payload);
+
+      if (validatedItems.length > 0) {
+        const rows = validatedItems.map((it) => ({
+          project_id: createdProject.id,
+          component_id: it.component_id,
+          quantity_needed: it.quantity_needed,
+        }));
+
+        const { error: itemsError } = await supabase.from('project_items').insert(rows);
+        if (itemsError) {
+          // Compensating delete bila insert BOM gagal
+          try {
+            await supabase.from('projects').delete().eq('id', createdProject.id);
+          } catch (compErr) {
+            console.error('[CRITICAL] Gagal compensating delete proyek yatim ID:', createdProject.id, compErr);
+          }
+          throw itemsError;
+        }
+      }
+
+      const fullProject = await projectModel.getById(createdProject.id);
+      const { items, summary } = calculateBomAnalytics(fullProject.project_items || []);
+
       return res.status(201).json({
         message: 'Proyek berhasil dibuat.',
         data: {
-          ...created,
-          total_items: 0,
-          ready_items_count: 0,
-          readiness_percent: 0,
-          total_bom_cost: 0,
-          missing_cost: 0,
+          ...fullProject,
+          items,
+          summary,
         },
       });
     } catch (err) {
@@ -137,12 +211,110 @@ export const projectController = {
 
   async update(req, res, next) {
     const body = req.body ?? {};
-    const { payload, error } = validateProjectPayload(body);
-    if (error) return res.status(400).json({ error });
+    const name = typeof body.name === 'string' ? body.name.trim() : '';
+    if (!name || name.length > 120) {
+      return res.status(400).json({ error: 'Nama proyek wajib diisi (maksimal 120 karakter).' });
+    }
+    if (body.description !== undefined && typeof body.description !== 'string') {
+      return res.status(400).json({ error: 'Deskripsi proyek harus berupa teks.' });
+    }
+
+    // Eksklusif HANYA name dan description: status dan image_path TIDAK PERNAH diubah via PUT
+    const payload = {
+      name,
+      description: typeof body.description === 'string' ? body.description.trim() : '',
+    };
 
     try {
       const updated = await projectModel.update(req.params.id, payload);
       return res.status(200).json({ message: 'Data proyek berhasil diperbarui.', data: updated });
+    } catch (err) {
+      return next(err);
+    }
+  },
+
+  async updateStatus(req, res, next) {
+    if (!UUID_REGEX.test(req.params.id)) {
+      return res.status(400).json({ error: 'Format UUID proyek tidak valid.' });
+    }
+
+    const body = req.body ?? {};
+    const status = typeof body.status === 'string' ? body.status.trim() : '';
+
+    if (!ALLOWED_STATUS.has(status)) {
+      return res.status(400).json({
+        error: "Status proyek tidak valid. Pilihan: 'planned', 'in_progress', 'done'.",
+      });
+    }
+
+    try {
+      const updated = await projectModel.updateStatus(req.params.id, status);
+      return res.status(200).json({
+        message: 'Status proyek berhasil diperbarui.',
+        data: updated,
+      });
+    } catch (err) {
+      return next(err);
+    }
+  },
+
+  async uploadImage(req, res, next) {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Berkas gambar wajib diunggah pada field image.' });
+    }
+
+    if (req.file.size === 0 || req.file.buffer.length === 0) {
+      return res.status(400).json({ error: 'Berkas gambar tidak boleh kosong (0 byte).' });
+    }
+
+    // Deteksi ekstensi dan MIME asli secara independen HANYA dari magic bytes biner
+    const detected = detectImageFormatFromBuffer(req.file.buffer);
+    if (!detected) {
+      return res.status(400).json({
+        error: 'Konten berkas bukan gambar JPEG, PNG, atau WebP yang valid (magic bytes tidak cocok).',
+      });
+    }
+
+    try {
+      const project = req.targetProject || (await projectModel.getById(req.params.id));
+      const newFileName = `projects/${project.id}/${crypto.randomUUID()}.${detected.ext}`;
+
+      // 1. Unggah berkas baru ke Supabase Storage bucket 'project-images'
+      const { error: uploadError } = await supabase.storage
+        .from('project-images')
+        .upload(newFileName, req.file.buffer, {
+          contentType: detected.mime,
+          upsert: false,
+        });
+
+      if (uploadError) throw uploadError;
+
+      // 2. Perbarui kolom image_path di database
+      let updatedProject;
+      try {
+        updatedProject = await projectModel.updateImagePath(project.id, newFileName);
+      } catch (dbError) {
+        // Rollback: hapus berkas baru jika update DB gagal
+        await supabase.storage
+          .from('project-images')
+          .remove([newFileName])
+          .catch((cleanErr) => console.warn('[STORAGE_ROLLBACK_WARN]', cleanErr));
+        throw dbError;
+      }
+
+      // 3. Best-effort hapus berkas gambar lama di Storage jika berbeda
+      const oldPath = project.image_path;
+      if (oldPath && oldPath !== newFileName) {
+        supabase.storage
+          .from('project-images')
+          .remove([oldPath])
+          .catch((err) => console.warn('[STORAGE_OLD_DELETE_WARN]', err));
+      }
+
+      return res.status(200).json({
+        message: 'Foto proyek berhasil diunggah.',
+        data: updatedProject,
+      });
     } catch (err) {
       return next(err);
     }

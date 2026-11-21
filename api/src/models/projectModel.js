@@ -24,16 +24,24 @@ function createNotFoundError(message) {
   return err;
 }
 
+export function getImageUrl(imagePath) {
+  if (!imagePath) return null;
+  const { data } = supabase.storage.from('project-images').getPublicUrl(imagePath);
+  return data?.publicUrl || null;
+}
+
 export const projectModel = {
   async getAll() {
-    // Mengambil nested project_items + components sekaligus agar controller bisa menghitung readiness % tiap proyek
     const { data, error } = await supabase
       .from('projects')
       .select(PROJECT_WITH_BOM_SELECT)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data;
+    return (data || []).map((proj) => ({
+      ...proj,
+      image_url: getImageUrl(proj.image_path),
+    }));
   },
 
   async getById(id) {
@@ -44,7 +52,10 @@ export const projectModel = {
       .single();
 
     if (error) throw error;
-    return data;
+    return {
+      ...data,
+      image_url: getImageUrl(data.image_path),
+    };
   },
 
   async create(payload) {
@@ -55,7 +66,10 @@ export const projectModel = {
       .single();
 
     if (error) throw error;
-    return data;
+    return {
+      ...data,
+      image_url: getImageUrl(data.image_path),
+    };
   },
 
   async update(id, payload) {
@@ -67,11 +81,43 @@ export const projectModel = {
       .single();
 
     if (error) throw error;
-    return data;
+    return {
+      ...data,
+      image_url: getImageUrl(data.image_path),
+    };
+  },
+
+  async updateStatus(id, status) {
+    const { data, error } = await supabase
+      .from('projects')
+      .update({ status })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return {
+      ...data,
+      image_url: getImageUrl(data.image_path),
+    };
+  },
+
+  async updateImagePath(id, imagePath) {
+    const { data, error } = await supabase
+      .from('projects')
+      .update({ image_path: imagePath })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return {
+      ...data,
+      image_url: getImageUrl(data.image_path),
+    };
   },
 
   async remove(id) {
-    // .select() wajib agar baris kosong dapat terdeteksi sebagai 404 Not Found
     const { data, error } = await supabase
       .from('projects')
       .delete()
@@ -82,6 +128,21 @@ export const projectModel = {
     if (!data || data.length === 0) {
       throw createNotFoundError('Proyek tidak ditemukan.');
     }
-    return data[0];
+    const deleted = data[0];
+
+    // Best-effort hapus berkas gambar lama di storage jika ada
+    if (deleted.image_path) {
+      supabase.storage
+        .from('project-images')
+        .remove([deleted.image_path])
+        .catch((err) => {
+          console.warn('[STORAGE_DELETE_WARN] Gagal menghapus berkas di storage:', deleted.image_path, err);
+        });
+    }
+
+    return {
+      ...deleted,
+      image_url: null,
+    };
   },
 };
