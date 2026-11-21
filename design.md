@@ -137,7 +137,7 @@ html[data-theme='dark'] {
 
 ## 4. Aturan Glassmorphism Terbatas
 - Class `.glass` **HANYA BOLEH** digunakan pada elemen navigasi/melayang di atas viewport: `.top-bar`, `.bottom-nav`, `.modal-box`, `.toast`, dan `.pwa-badge` (maksimal 3 lapisan bersamaan).
-- Seluruh `.card`, `.stat-card`, thumbnail gambar, dan form input wajib menggunakan warna permukaan solid (`var(--surface)` atau `var(--surface-2)`).
+- Seluruh `.card`, thumbnail gambar, dan form input wajib menggunakan warna permukaan solid (`var(--surface)` atau `var(--surface-2)`).
 
 ---
 
@@ -191,10 +191,10 @@ Format wajib: **Warna Solid + Ikon Lucide + Teks Jelas**.
 
 ## 7. Wireframe 6 Rute Halaman Aplikasi
 
-1. **`DashboardPage` (`/`)**: TopBar -> StatCard 2x2 (Total Proyek, Dikerjakan, Selesai, Stok Menipis) -> FilterBar Status Proyek (Semua, Direncanakan, Dikerjakan, Selesai) -> List Kartu Proyek (Thumbnail 4:3, Nama Proyek, Deskripsi 2 baris `line-clamp: 2`, StatusChip, Readiness Bar & %, link klik ke `/projects/:id`) -> `Pagination` (sinkron URL `?page=`).
+1. **`DashboardPage` (`/`)**: TopBar -> Header Ringkasan & FilterBar Status Proyek (Semua n | Direncanakan n | Dikerjakan n | Selesai n, sinkron `?status=`) -> List Kartu Proyek (Thumbnail ProjectCover 4:3, Nama Proyek, Deskripsi 2 baris `line-clamp: 2`, StatusChip, Readiness Bar & %, link klik ke `/projects/:id`) -> `Pagination` (sinkron URL `?page=`).
 2. **`ComponentListPage` (`/components`)**: TopBar (tombol `+ Tambah`) -> `ComponentInlineForm.jsx` (collapsible) -> FilterBar (Search + Kategori + Stok Menipis) -> List Kartu Komponen (Nama, Laci monospace, Harga, Chip Cukup/Menipis, Stepper Stok) -> `Pagination` (sinkron URL `?page=`).
 3. **`ComponentDetailPage` (`/components/:id`)**: TopBar (Back button) -> Kartu Spesifikasi Lengkap -> Stepper Stok -> Form Inline Edit Spek -> Tombol Hapus (`ConfirmModal`) -> Daftar Proyek Pemakai (`used_in_projects`).
-4. **`CalculatorPage` (`/calculator`)**: TopBar -> Form Info Proyek -> `ImagePicker` (Upload gambar, preview 4:3, info kompresi Canvas) -> `ComponentPicker` (Search bar komponen, list komponen ringkas + tombol Tambah, pagination state lokal) -> `BomBuilder` (Daftar item BOM terpilih, qty > 0, proteksi duplikat, tombol hapus item) -> Live Summary BOM (Readiness bar %, Total Biaya Rp, Estimasi Kekurangan Biaya Rp, status auto-save draf) -> Tombol Finalisasi Proyek (*"Finalisasi & Simpan Proyek"*, disabled saat offline).
+4. **`CalculatorPage` (`/calculator`)**: TopBar -> Form Info Proyek -> `ImagePicker` (Upload gambar, preview 4:3, info kompresi Canvas) -> Form Tambah Item BOM (Dropdown select komponen dengan kelompok `<optgroup>` per kategori, input kuantitas kebutuhan, tombol Tambah ke BOM) -> `BomBuilder` (Daftar item BOM terpilih, qty > 0, proteksi duplikat, tombol hapus item) -> Live Summary BOM (Readiness bar %, Total Biaya Rp, Estimasi Kekurangan Biaya Rp, status auto-save draf) -> Tombol Finalisasi Proyek (*"Finalisasi & Simpan Proyek"*, disabled saat offline).
 5. **`ProjectDetailPage` (`/projects/:id`)**: TopBar (Back button) -> Hero Proyek (Gambar 4:3 dengan tombol retry upload jika ada gambar lokal gagal, Nama, Deskripsi, Selector Status Proyek yang memicu PATCH status) -> Form Inline Edit Nama & Deskripsi -> Tombol Hapus (`ConfirmModal`) -> Kartu Kesiapan Rakit (Build Readiness %) -> Daftar Item BOM (Nama klik ke komponen, Stok vs Kebutuhan, Chip Cukup/Kurang, tombol hapus item) -> Form Tambah Komponen ke BOM -> Kartu Daftar Belanja (Shopping Deficit).
 6. **`ProfilePage` (`/profile`)**: TopBar -> Seksi 1: Identitas Pembuat (`STUDENT_PROFILE`: Robertus William Susanto / `21120124120007`), Theme Toggle, Status Online/Offline, Status Draf Kalkulator -> Seksi 2: Tentang Aplikasi (`APP_INFO`: nama, versi 4.0, penjelasan rumus BOM & pemisahan status proyek vs readiness).
 

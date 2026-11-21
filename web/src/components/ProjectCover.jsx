@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 // Komponen penampil sampul gambar proyek dengan rasio 4:3 & fallback SVG inline (< 1 KB)
-// Memenuhi Aturan Ringan: loading="lazy", decoding="async", crossOrigin="anonymous", bebas gradient/filter.
+// Memenuhi Aturan Ringan: loading="lazy", decoding="async", crossOrigin="anonymous", bebas efek bayangan dan filter warna berlebih.
 export default function ProjectCover({ url, alt = 'Sampul dokumentasi proyek', className = '' }) {
   const [hasError, setHasError] = useState(false);
 

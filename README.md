@@ -173,6 +173,10 @@ partsbin/
 | **R11** | PWA wajib di-deploy di free hosting (Vercel); tautan repositori dicantumkan di kolom GitHub | MENUNGGU DEPLOY | `web/vercel.json` dan deploy produksi 2 project di Vercel dikerjakan setelah pengerjaan frontend tuntas. |
 | **R12** | Rentang pengerjaan 13–24 Nov 2026, responsi 25–28 Nov 2026; dilarang Protect Cell sebelum memiliki judul | MANUAL OLEH PRAKTIKAN | Jadwal pengerjaan dipatuhi oleh praktikan. |
 
+### Batasan Sadar & Keamanan Sistem
+1. **API Tanpa Autentikasi**: Sesuai dengan spesifikasi tugas akhir PPB dasar, seluruh 16 endpoint REST API dirancang tanpa mekanisme login/autentikasi (berlaku sebagai sistem inventaris meja kerja bersama / *shared workshop bench*).
+2. **Keamanan Supabase Storage**: Bucket `project-images` diakses menggunakan Supabase anon key yang secara ketat HANYA dipegang dan dikelola oleh backend API (`api/src/config/supabaseClient.js`). Frontend `web/` sama sekali tidak memiliki akses kredensial Supabase maupun SDK `@supabase/supabase-js`, dan operasi penyimpanan diamankan melalui RLS policy Supabase Storage (`storage.objects`).
+
 ---
 
 ## 6. Spesifikasi 16 Endpoint REST API (`/api`)

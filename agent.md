@@ -65,7 +65,7 @@ Aturan Asisten Praktikum (Asprak) adalah **otoritas tertinggi**, berada di atas 
      - `ALTER TABLE projects ADD COLUMN IF NOT EXISTS image_path TEXT DEFAULT NULL`.
      - Skrip pembuatan bucket Supabase Storage `project-images` (public, limit 2 MB, MIME: `image/jpeg`, `image/png`, `image/webp`) dengan `ON CONFLICT DO UPDATE`.
      - 4 policy `storage.objects` (SELECT public, INSERT/UPDATE/DELETE backend) yang didahului `DROP POLICY IF EXISTS`.
-  2. Tambahkan dependensi `"multer": "^2.0.2"` (versi 2.x terbaru, minimal 2.0.2; versi 1.x dilarang karena CVE) pada `api/package.json`, jalankan `npm install`, dan jalankan `npm audit` di `api/` lalu laporkan hasilnya secara jujur.
+  2. Tambahkan dependensi `"multer": "^2.5.0"` (versi 2.x terbaru, minimal 2.0.2, terpasang `^2.5.0`; versi 1.x dilarang karena CVE) pada `api/package.json`, jalankan `npm install`, dan jalankan `npm audit` di `api/` lalu laporkan hasilnya secara jujur.
   3. Buat middleware `api/src/middlewares/upload.js`:
      - Menggunakan `multer.memoryStorage()`, batas `limits: { fileSize: 2 * 1024 * 1024 }`.
      - Filter whitelist MIME type: `image/jpeg`, `image/png`, `image/webp`.
