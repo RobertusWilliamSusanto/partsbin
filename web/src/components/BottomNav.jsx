@@ -1,10 +1,11 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Cpu, FolderKanban, User } from 'lucide-react';
+import { LayoutDashboard, Cpu, Calculator, User } from 'lucide-react';
 
+// 4 tab navigasi utama BottomNav sesuai spesifikasi v4.0 (aktif di seluruh lebar layar)
 const NAV_ITEMS = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/components', label: 'Komponen', icon: Cpu, end: false },
-  { to: '/projects', label: 'Proyek', icon: FolderKanban, end: false },
+  { to: '/calculator', label: 'Kalkulator', icon: Calculator, end: false },
   { to: '/profile', label: 'Profil', icon: User, end: true },
 ];
 

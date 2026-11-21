@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import {
   BrowserRouter,
   Routes,
@@ -14,9 +15,11 @@ import DashboardPage from './pages/DashboardPage';
 import ComponentListPage from './pages/ComponentListPage';
 import ComponentDetailPage from './pages/ComponentDetailPage';
 import ProjectListPage from './pages/ProjectListPage';
-import ProjectCreatePage from './pages/ProjectCreatePage';
-import ProjectDetailPage from './pages/ProjectDetailPage';
-import ProfilePage from './pages/ProfilePage';
+
+// Lazy loading halaman berat untuk menghemat ukuran bundle awal (JS gzip awal < 120 KB)
+const CalculatorPage = lazy(() => import('./pages/ProjectCreatePage'));
+const ProjectDetailPage = lazy(() => import('./pages/ProjectDetailPage'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 
 function getRouteMeta(pathname) {
   if (pathname === '/') {
@@ -28,14 +31,14 @@ function getRouteMeta(pathname) {
   if (pathname.startsWith('/components/')) {
     return { title: 'Detail Komponen', subtitle: 'Inspektor Stok & BOM', showBack: true };
   }
-  if (pathname === '/projects') {
-    return { title: 'PartsBin', subtitle: 'Proyek & BOM', showBack: false };
+  if (pathname === '/calculator') {
+    return { title: 'Kalkulator BOM', subtitle: 'Perencanaan Proyek', showBack: false };
   }
-  if (pathname === '/projects/new') {
-    return { title: 'Buat Proyek Baru', subtitle: 'Proyek & BOM Sekaligus', showBack: true };
+  if (pathname === '/projects') {
+    return { title: 'PartsBin', subtitle: 'Daftar Proyek', showBack: false };
   }
   if (pathname.startsWith('/projects/')) {
-    return { title: 'Detail Proyek', subtitle: 'Kalkulator BOM', showBack: true };
+    return { title: 'Detail Proyek', subtitle: 'Kalkulator & Status BOM', showBack: true };
   }
   if (pathname === '/profile') {
     return { title: 'PartsBin', subtitle: 'Profil & Tentang', showBack: false };
@@ -61,19 +64,22 @@ function AppShell() {
       <PWABadge />
 
       <main className="main">
-        <Routes>
-          <Route path="/" element={<DashboardPage />} />
-          <Route path="/components" element={<ComponentListPage />} />
-          <Route path="/components/:id" element={<ComponentDetailPage />} />
-          <Route path="/projects" element={<ProjectListPage />} />
-          <Route path="/projects/new" element={<ProjectCreatePage />} />
-          <Route path="/projects/:id" element={<ProjectDetailPage />} />
-          <Route
-            path="/profile"
-            element={<ProfilePage theme={theme} onToggleTheme={toggleTheme} />}
-          />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        <Suspense fallback={<div className="card loading-state"><span>Memuat halaman...</span></div>}>
+          <Routes>
+            <Route path="/" element={<DashboardPage />} />
+            <Route path="/components" element={<ComponentListPage />} />
+            <Route path="/components/:id" element={<ComponentDetailPage />} />
+            <Route path="/calculator" element={<CalculatorPage />} />
+            <Route path="/projects/new" element={<Navigate to="/calculator" replace />} />
+            <Route path="/projects" element={<ProjectListPage />} />
+            <Route path="/projects/:id" element={<ProjectDetailPage />} />
+            <Route
+              path="/profile"
+              element={<ProfilePage theme={theme} onToggleTheme={toggleTheme} />}
+            />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
       </main>
 
       <BottomNav />
