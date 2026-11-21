@@ -14,7 +14,6 @@ import BottomNav from './components/BottomNav';
 import DashboardPage from './pages/DashboardPage';
 import ComponentListPage from './pages/ComponentListPage';
 import ComponentDetailPage from './pages/ComponentDetailPage';
-import ProjectListPage from './pages/ProjectListPage';
 
 // Lazy loading halaman berat untuk menghemat ukuran bundle awal (JS gzip awal < 120 KB)
 const CalculatorPage = lazy(() => import('./pages/ProjectCreatePage'));
@@ -71,7 +70,7 @@ function AppShell() {
             <Route path="/components/:id" element={<ComponentDetailPage />} />
             <Route path="/calculator" element={<CalculatorPage />} />
             <Route path="/projects/new" element={<Navigate to="/calculator" replace />} />
-            <Route path="/projects" element={<ProjectListPage />} />
+            <Route path="/projects" element={<Navigate to="/" replace />} />
             <Route path="/projects/:id" element={<ProjectDetailPage />} />
             <Route
               path="/profile"

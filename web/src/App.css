@@ -496,6 +496,126 @@
   font-weight: 600;
 }
 
+/* --- Project Cover & Card Styling --- */
+.project-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: hidden;
+  padding: 12px;
+}
+
+.project-cover {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: var(--surface-2);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.project-cover__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.project-cover__fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
+.project-cover__svg {
+  width: 60%;
+  height: 60%;
+}
+
+.project-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.project-desc {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin: 0;
+}
+
+/* --- Status Selector (3 Buttons) --- */
+.status-selector {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.status-btn {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 8px 4px;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background-color: var(--surface);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
+}
+
+.status-btn:hover:not(:disabled) {
+  border-color: var(--border-strong);
+  color: var(--text);
+  background-color: var(--surface-2);
+}
+
+.status-btn[aria-pressed='true'].status-btn--planned {
+  border-color: var(--border-strong);
+  background-color: var(--status-planned-bg);
+  color: var(--status-planned);
+  font-weight: 700;
+}
+
+.status-btn[aria-pressed='true'].status-btn--progress {
+  border-color: var(--accent);
+  background-color: var(--status-progress-bg);
+  color: var(--status-progress);
+  font-weight: 700;
+}
+
+.status-btn[aria-pressed='true'].status-btn--done {
+  border-color: var(--ok);
+  background-color: var(--status-done-bg);
+  color: var(--status-done);
+  font-weight: 700;
+}
+
+.status-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* --- 6. Progress Bar Readiness & Stepper Stok --- */
 .readiness-row {
   display: flex;

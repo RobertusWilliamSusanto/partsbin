@@ -7,8 +7,15 @@ export function usePagination(items, { pageSize = 6, syncUrl = true, resetKey } 
   // Rules of Hooks: SELALU panggil kedua hook di tingkat atas secara konsisten
   const [searchParams, setSearchParams] = useSearchParams();
   const [localPage, setLocalPage] = useState(1);
-  const [prevResetKey, setPrevResetKey] = useState(resetKey);
-  const isFirstMount = useRef(true);
+  const [prevLocalKey, setPrevLocalKey] = useState(resetKey);
+
+  // Ref untuk melacak nilai resetKey sebelumnya.
+  // Kenapa memakai ref prevResetKey (bukan boolean isFirstMount)?
+  // Di React StrictMode (atau saat browser me-refresh URL seperti /components?page=2),
+  // komponen di-mount ulang. Membandingkan prevResetKey.current !== resetKey menjamin
+  // bahwa reset ke halaman 1 HANYA berjalan ketika filter pencarian/kategori benar-benar berubah,
+  // sehingga refresh pada halaman 2 tetap berada di halaman 2 (tidak terlempar ke halaman 1).
+  const prevResetKeyRef = useRef(resetKey);
 
   // Ambil nomor halaman dari URL query jika syncUrl aktif
   const urlPage = useMemo(() => {
@@ -18,8 +25,8 @@ export function usePagination(items, { pageSize = 6, syncUrl = true, resetKey } 
   }, [searchParams]);
 
   // Penyesuaian state lokal saat resetKey berubah (pola resmi React untuk reset state berbasis prop)
-  if (!syncUrl && resetKey !== prevResetKey) {
-    setPrevResetKey(resetKey);
+  if (!syncUrl && resetKey !== prevLocalKey) {
+    setPrevLocalKey(resetKey);
     setLocalPage(1);
   }
 
@@ -59,23 +66,20 @@ export function usePagination(items, { pageSize = 6, syncUrl = true, resetKey } 
 
   // Efek reset ke halaman 1 pada URL query saat filter pencarian/kategori berubah
   useEffect(() => {
-    // JANGAN lakukan reset saat pertama kali halaman di-mount
-    if (isFirstMount.current) {
-      isFirstMount.current = false;
-      return;
-    }
-
-    // Kenapa memakai replace ({ replace: true })? Penggantian filter hanya menyaring tampilan saat ini,
-    // bukan perjalanan eksplisit antar halaman, sehingga tidak boleh mengotori riwayat tombol 'Back'.
-    if (syncUrl) {
-      setSearchParams(
-        (prev) => {
-          const next = new URLSearchParams(prev);
-          next.set('page', '1');
-          return next;
-        },
-        { replace: true }
-      );
+    if (prevResetKeyRef.current !== resetKey) {
+      prevResetKeyRef.current = resetKey;
+      // Kenapa memakai replace ({ replace: true })? Penggantian filter hanya menyaring tampilan saat ini,
+      // bukan perjalanan eksplisit antar halaman, sehingga tidak boleh mengotori riwayat tombol 'Back'.
+      if (syncUrl) {
+        setSearchParams(
+          (prev) => {
+            const next = new URLSearchParams(prev);
+            next.set('page', '1');
+            return next;
+          },
+          { replace: true }
+        );
+      }
     }
   }, [resetKey, syncUrl, setSearchParams]);
 

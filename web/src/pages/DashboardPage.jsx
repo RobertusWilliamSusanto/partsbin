@@ -1,71 +1,104 @@
 import { useMemo } from 'react';
-import { Link } from 'react-router-dom';
-import {
-  AlertTriangle,
-  CheckCircle2,
-  ChevronRight,
-  RefreshCw,
-  FolderKanban,
-  PackageCheck,
-} from 'lucide-react';
-import { useComponents } from '../hooks/useComponents';
+import { Link, useSearchParams } from 'react-router-dom';
+import { AlertTriangle, RefreshCw, FolderPlus } from 'lucide-react';
 import { useProjects } from '../hooks/useProjects';
-import { formatRupiah } from '../utils/format';
+import { useOnlineStatus } from '../hooks/useOnlineStatus';
+import { usePagination } from '../hooks/usePagination';
+import ProjectCover from '../components/ProjectCover';
+import StatusChip from '../components/StatusChip';
+import Pagination from '../components/Pagination';
 
+// Halaman Dashboard Utama (v4.0) — Menampilkan seluruh daftar proyek dengan filter status & pagination
+// Memenuhi Aturan Wajib Asprak R6 (List Proyek -> Detail /projects/:id)
 export default function DashboardPage() {
-  const {
-    components,
-    loading: loadingComp,
-    error: errorComp,
-    refetch: refetchComp,
-  } = useComponents();
-  const {
-    projects,
-    loading: loadingProj,
-    error: errorProj,
-    refetch: refetchProj,
-  } = useProjects();
+  const { projects, loading, error, refetch } = useProjects();
+  const isOnline = useOnlineStatus();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  // Metrik dashboard dihitung langsung dari data komponen & proyek agar sinkron saat offline
-  const metrics = useMemo(() => {
-    const totalAssetValue = components.reduce(
-      (acc, comp) => acc + comp.stock * comp.unit_price,
-      0
-    );
-    const lowStockComponents = components.filter((comp) => comp.is_low_stock);
-    const readyProjects = projects.filter(
-      (proj) => proj.total_items > 0 && proj.readiness_percent === 100
-    );
+  // Sinkronisasi status filter dengan URL query ?status=
+  const statusFilter = searchParams.get('status') || 'ALL';
 
+  const counts = useMemo(() => {
+    const list = Array.isArray(projects) ? projects : [];
     return {
-      totalTypes: components.length,
-      totalAssetValue,
-      lowStockComponents,
-      readyProjects,
+      all: list.length,
+      planned: list.filter((p) => p.status === 'planned').length,
+      in_progress: list.filter((p) => p.status === 'in_progress').length,
+      done: list.filter((p) => p.status === 'done').length,
     };
-  }, [components, projects]);
+  }, [projects]);
 
-  const loading = loadingComp || loadingProj;
-  const error = errorComp || errorProj;
+  const pills = [
+    { value: 'ALL', label: `Semua ${counts.all}` },
+    { value: 'planned', label: `Direncanakan ${counts.planned}` },
+    { value: 'in_progress', label: `Dikerjakan ${counts.in_progress}` },
+    { value: 'done', label: `Selesai ${counts.done}` },
+  ];
 
-  const handleRetry = () => {
-    refetchComp();
-    refetchProj();
+  const handleStatusChange = (newStatus) => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (newStatus === 'ALL') {
+          next.delete('status');
+        } else {
+          next.set('status', newStatus);
+        }
+        return next;
+      },
+      { replace: true }
+    );
   };
 
+  const filteredProjects = useMemo(() => {
+    const list = Array.isArray(projects) ? projects : [];
+    if (statusFilter === 'ALL') return list;
+    return list.filter((p) => p.status === statusFilter);
+  }, [projects, statusFilter]);
+
+  // Pagination client-side pageSize = 6, tersinkronisasi URL dan me-reset ke halaman 1 saat filter status berganti
+  const { page, totalPages, pageItems, total, from, to, setPage } = usePagination(
+    filteredProjects,
+    { pageSize: 6, syncUrl: true, resetKey: statusFilter }
+  );
+
   return (
-    <section className="page stack-md">
+    <section className="page">
       <div className="masthead">
         <h1 className="display">Dashboard Meja Kerja</h1>
-        <p className="lede">
-          Ringkasan stok komponen, estimasi aset, dan kesiapan rakit proyek elektronika.
-        </p>
+        <p className="lede">Daftar proyek elektronika, status pengerjaan fisik, dan kesiapan rakit BOM.</p>
+      </div>
+
+      {!isOnline && (
+        <div className="alert alert--warn" style={{ marginBottom: 16 }} role="status">
+          <AlertTriangle size={20} strokeWidth={1.75} aria-hidden="true" />
+          <span>Anda sedang offline. Menampilkan data dari memori cache.</span>
+        </div>
+      )}
+
+      {/* Filter Status Pills dengan Penghitung Live */}
+      <div className="filter-pills" role="tablist" aria-label="Filter status proyek" style={{ marginBottom: 16 }}>
+        {pills.map(({ value, label }) => {
+          const isActive = statusFilter === value;
+          return (
+            <button
+              key={value}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              className={`pill-btn ${isActive ? 'active' : ''}`}
+              onClick={() => handleStatusChange(value)}
+            >
+              {label}
+            </button>
+          );
+        })}
       </div>
 
       {loading && (
         <div className="card loading-state" role="status">
           <RefreshCw size={20} strokeWidth={1.75} aria-hidden="true" />
-          <span>Memuat ringkasan inventaris...</span>
+          <span>Memuat daftar proyek...</span>
         </div>
       )}
 
@@ -75,7 +108,7 @@ export default function DashboardPage() {
             <AlertTriangle size={20} strokeWidth={1.75} aria-hidden="true" />
             <span>{error}</span>
           </div>
-          <button type="button" className="btn btn--outline" onClick={handleRetry}>
+          <button type="button" className="btn btn--outline" onClick={() => refetch()}>
             <RefreshCw size={20} strokeWidth={1.75} aria-hidden="true" />
             <span>Coba Lagi</span>
           </button>
@@ -84,98 +117,54 @@ export default function DashboardPage() {
 
       {!loading && !error && (
         <>
-          <div className="stat-grid">
-            <div className="stat-card">
-              <span className="stat-label">Total Jenis Komponen</span>
-              <span className="stat-value">{metrics.totalTypes}</span>
-            </div>
-            <div className="stat-card">
-              <span className="stat-label">Estimasi Nilai Aset</span>
-              <span className="stat-value">{formatRupiah(metrics.totalAssetValue)}</span>
-            </div>
-            <div className="stat-card">
-              <span className="stat-label">Komponen Stok Menipis</span>
-              <span className="stat-value">{metrics.lowStockComponents.length}</span>
-            </div>
-            <div className="stat-card">
-              <span className="stat-label">Proyek Siap Rakit (100%)</span>
-              <span className="stat-value">{metrics.readyProjects.length}</span>
-            </div>
+          <div className="list-head">
+            <h2>Daftar Proyek</h2>
+            <span className="count">{total > 0 ? `Menampilkan ${from}–${to} dari ${total}` : '0 proyek'}</span>
           </div>
 
-          <div className="dashboard-columns">
-            <div>
-              <div className="list-head">
-                <h2>Peringatan Stok Menipis</h2>
-                <span className="count">{metrics.lowStockComponents.length} item</span>
-              </div>
-
-              {metrics.lowStockComponents.length === 0 ? (
-                <div className="card empty-state">
-                  <PackageCheck size={20} strokeWidth={1.75} aria-hidden="true" />
-                  <p>Seluruh komponen berada di atas batas stok minimum.</p>
-                </div>
-              ) : (
-                <ul className="stock">
-                  {metrics.lowStockComponents.map((comp) => (
-                    <li key={comp.id} className="card card--interactive">
-                      <Link to={`/components/${comp.id}`} className="link-row">
-                        <div className="stack-sm" style={{ minWidth: 0 }}>
-                          <span className="card-title">{comp.name}</span>
-                          <div className="row-wrap">
-                            <span className="mono-badge">{comp.bin_location}</span>
-                            <span className="chip chip--warn">
-                              <AlertTriangle size={20} strokeWidth={1.75} aria-hidden="true" />
-                              <span>
-                                Stok {comp.stock} / Min {comp.min_stock}
-                              </span>
-                            </span>
-                          </div>
-                        </div>
-                        <ChevronRight size={20} strokeWidth={1.75} aria-hidden="true" />
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
+          {projects.length === 0 ? (
+            <div className="card empty-state">
+              <FolderPlus size={32} strokeWidth={1.5} aria-hidden="true" style={{ color: 'var(--text-muted)' }} />
+              <p style={{ marginTop: 8 }}>Belum ada proyek terdaftar di workbench.</p>
+              <Link to="/calculator" className="btn btn--primary" style={{ marginTop: 12 }}>
+                Rancang Proyek Pertama
+              </Link>
             </div>
-
-            <div>
-              <div className="list-head">
-                <h2>Proyek Siap Rakit (100%)</h2>
-                <span className="count">{metrics.readyProjects.length} proyek</span>
-              </div>
-
-              {metrics.readyProjects.length === 0 ? (
-                <div className="card empty-state">
-                  <FolderKanban size={20} strokeWidth={1.75} aria-hidden="true" />
-                  <p>Belum ada proyek dengan kesiapan BOM 100%.</p>
-                </div>
-              ) : (
-                <ul className="stock">
-                  {metrics.readyProjects.map((proj) => (
-                    <li key={proj.id} className="card card--interactive">
-                      <Link to={`/projects/${proj.id}`} className="link-row">
-                        <div className="stack-sm" style={{ minWidth: 0 }}>
-                          <span className="card-title">{proj.name}</span>
-                          <div className="row-wrap">
-                            <span className="chip chip--ok">
-                              <CheckCircle2 size={20} strokeWidth={1.75} aria-hidden="true" />
-                              <span>Siap Rakit</span>
-                            </span>
-                            <span className="count">
-                              {proj.total_items} item BOM · {formatRupiah(proj.total_bom_cost)}
-                            </span>
-                          </div>
-                        </div>
-                        <ChevronRight size={20} strokeWidth={1.75} aria-hidden="true" />
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
+          ) : total === 0 ? (
+            <div className="card empty-state">
+              <p>Tidak ada proyek dengan status ini.</p>
             </div>
-          </div>
+          ) : (
+            <>
+              <ul className="stock stock--projects">
+                {pageItems.map((proj) => (
+                  <li key={proj.id}>
+                    <Link to={`/projects/${proj.id}`} className="card card--interactive project-card">
+                      <ProjectCover url={proj.image_url} alt={proj.name} />
+                      <div className="project-card__body">
+                        <div className="card-head">
+                          <h2 className="card-title">{proj.name}</h2>
+                          <StatusChip status={proj.status} />
+                        </div>
+                        <p className="project-desc">{proj.description || 'Tidak ada deskripsi.'}</p>
+                        <div className="readiness-row" style={{ marginTop: 'auto' }}>
+                          <div className="readiness-track" aria-hidden="true">
+                            <div
+                              className={`readiness-fill ${proj.readiness_percent === 100 ? 'readiness-fill--ok' : proj.readiness_percent >= 50 ? 'readiness-fill--accent' : 'readiness-fill--warn'}`}
+                              style={{ width: `${proj.readiness_percent || 0}%` }}
+                            />
+                          </div>
+                          <span className="readiness-pct">{proj.readiness_percent || 0}%</span>
+                        </div>
+                      </div>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+
+              <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+            </>
+          )}
         </>
       )}
     </section>
