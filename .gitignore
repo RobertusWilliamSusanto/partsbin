@@ -1,23 +1,48 @@
-# Dependencies
+# ==========================================
+# 1. Dependencies
+# ==========================================
 node_modules/
 
-# Environment variables (secret tidak boleh ter-commit ke Git)
+# ==========================================
+# 2. Environment & Secrets (Zero Secret Leak)
+# ==========================================
 .env
 .env.*
+.env.local
+.env.*.local
+!.env.example
 !**/.env.example
 
-# Build outputs & PWA dev cache
-dist/
-dev-dist/
+# ==========================================
+# 3. Build & PWA Cache (React + Vite + VitePWA)
+# ==========================================
+dist
+dist-ssr
+dev-dist
 
-# Vercel deployment metadata
-.vercel/
+# ==========================================
+# 4. Vercel Deployment Metadata
+# ==========================================
+.vercel
 
-# Referensi praktikum & folder acuan prompt lokal
-_referensi/
-folder_acuan/
+# ==========================================
+# 5. Logs
+# ==========================================
+*.log
+npm-debug.log*
 
-# OS & log files
+# ==========================================
+# 6. OS & Editor Files
+# ==========================================
 .DS_Store
 Thumbs.db
-*.log
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.sw?
+
+# ==========================================
+# 7. Folder Referensi Lokal & Acuan
+# ==========================================
+_referensi/
+folder_acuan/
