@@ -192,7 +192,12 @@ export default function ProjectDetailPage() {
         </form>
       </div>
 
-      <ProjectShoppingCard shoppingList={summary.shopping_list} missingCost={summary.missing_cost} />
+      <ProjectShoppingCard
+        projectName={project.name}
+        shoppingList={summary.shopping_list || []}
+        missingCost={summary.missing_cost || 0}
+        onToast={setToastError}
+      />
 
       {toastError && <div className="toast toast--error"><span>{toastError}</span><button type="button" className="icon-btn" onClick={() => setToastError(null)}><X size={18} /></button></div>}
       <ConfirmModal isOpen={isDeleteProjOpen} title="Hapus Proyek?" message={`Proyek "${project.name}" beserta BOM akan dihapus.`} confirmLabel="Hapus" loading={deleting} onConfirm={handleDeleteProject} onCancel={() => setIsDeleteProjOpen(false)} />

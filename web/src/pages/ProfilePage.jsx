@@ -2,15 +2,26 @@ import { useState } from 'react';
 import { Sun, Moon, Wifi, WifiOff, FileText, Trash2, Info, User } from 'lucide-react';
 import { STUDENT_PROFILE, APP_INFO } from '../config/profile';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
-import { hasDraft, clearComponentDraft } from '../utils/draftStorage';
+import {
+  hasDraft,
+  clearComponentDraft,
+  hasCalculatorDraft,
+  clearCalculatorDraft,
+} from '../utils/draftStorage';
 
 export default function ProfilePage({ theme, onToggleTheme }) {
   const isOnline = useOnlineStatus();
   const [draftExists, setDraftExists] = useState(() => hasDraft());
+  const [calcDraftExists, setCalcDraftExists] = useState(() => hasCalculatorDraft());
 
   const handleClearDraft = () => {
     clearComponentDraft();
     setDraftExists(false);
+  };
+
+  const handleClearCalcDraft = () => {
+    clearCalculatorDraft();
+    setCalcDraftExists(false);
   };
 
   return (
@@ -99,6 +110,30 @@ export default function ProfilePage({ theme, onToggleTheme }) {
                       type="button"
                       className="btn btn--ghost btn--sm"
                       onClick={handleClearDraft}
+                    >
+                      <Trash2 size={20} strokeWidth={1.75} aria-hidden="true" />
+                      <span>Hapus</span>
+                    </button>
+                  </>
+                ) : (
+                  <span className="chip chip--neutral">Kosong</span>
+                )}
+              </div>
+            </div>
+
+            <div className="row-between">
+              <span className="muted">Draf Kalkulator BOM</span>
+              <div className="row-wrap">
+                {calcDraftExists ? (
+                  <>
+                    <span className="chip chip--warn">
+                      <FileText size={20} strokeWidth={1.75} aria-hidden="true" />
+                      <span>Tersimpan</span>
+                    </span>
+                    <button
+                      type="button"
+                      className="btn btn--ghost btn--sm"
+                      onClick={handleClearCalcDraft}
                     >
                       <Trash2 size={20} strokeWidth={1.75} aria-hidden="true" />
                       <span>Hapus</span>

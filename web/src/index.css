@@ -20,6 +20,7 @@ html[data-theme='light'] {
   --warn: #b45309;
   --warn-tint: #fef3c7;
   --danger: #b91c1c;
+  --danger-contrast: #ffffff;
   --danger-tint: #fee2e2;
   --glass-bg: rgba(255, 255, 255, 0.86);
   --glass-border: rgba(15, 23, 42, 0.12);
@@ -60,6 +61,7 @@ html[data-theme='dark'] {
   --warn: #fbbf24;
   --warn-tint: #451a03;
   --danger: #f87171;
+  --danger-contrast: #0b0f17;
   --danger-tint: #450a0a;
   --glass-bg: rgba(17, 24, 39, 0.86);
   --glass-border: rgba(241, 245, 249, 0.12);

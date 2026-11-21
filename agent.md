@@ -90,7 +90,7 @@ Aturan Asisten Praktikum (Asprak) adalah **otoritas tertinggi**, berada di atas 
 - **Tujuan**: Menambahkan modul utilitas baru, komponen UI dasar v4.0, hook pagination dengan opsi `syncUrl`, dan penyesuaian BottomNav 4 tab terhadap kode frontend yang sudah ada.
 - **Tugas (Delta terhadap kode yang ada)**:
   1. Buat `web/src/utils/bom.js` mengekspor rumus kalkulator live BOM (`calculateReadiness`, `calculateBomCost`, `calculateMissingCost`, `calculateShoppingList`) terisolasi (< 120 baris).
-  2. Buat `web/src/utils/imageCompress.js` kompresi Canvas API browser (`createImageBitmap`, max 1280px, kualitas 0.8, target blob < 500 KB, < 90 baris) tanpa dependensi npm.
+  2. Buat `web/src/utils/imageCompress.js` kompresi Canvas API browser (`createImageBitmap`, max 1024px, kualitas 0.8 > 0.7 > 0.6, target blob < 200 KB, orientasi EXIF `from-image`, `bitmap.close()`, < 100 baris) tanpa dependensi npm.
   3. Buat `web/src/hooks/usePagination.js` yang mendukung opsi `syncUrl = true` (default). Bila `true`, sinkronkan ke `?page=`; bila `false`, kelola state halaman di memori lokal React.
   4. Buat komponen `web/src/components/Pagination.jsx` (area sentuh 44px, `tabular-nums`, `aria-label`, `aria-current="page"`, ikon `ChevronLeft` / `ChevronRight`, sembunyikan jika `totalPages <= 1`, < 90 baris).
   5. Buat komponen `web/src/components/StatusChip.jsx` (ikon `Clock`/`Hammer`/`CheckCircle`, warna solid token status, teks Direncanakan/Dikerjakan/Selesai, < 60 baris).
@@ -158,4 +158,11 @@ Aturan Asisten Praktikum (Asprak) adalah **otoritas tertinggi**, berada di atas 
 ---
 
 ### TAHAP 4B — Penyempurnaan Kalkulator BOM & Kompresi Canvas Image
-- **Tujuan**: Penyempurnaan antarmuka halaman `/calculator` dengan pemilih komponen berbasis `<select>` inventaris standar, kalkulasi live `bom.js`, auto-save draf `partsbin_draft_calculator`, dan kompresi gambar Canvas API sebelum finalisasi proyek.
+- **Status Repo**: **SELESAI**
+- **Cakupan Selesai**:
+  1. `web/src/utils/imageCompress.js` (< 100 baris): `MAX_SIDE 1024`, target < 200 KB, loop kualitas adaptif 0.8 > 0.7 > 0.6, uji WebP dengan fallback JPEG, `createImageBitmap` dengan opsi `{ imageOrientation: 'from-image' }`, dan pemanggilan wajib `bitmap.close()` di blok `finally`.
+  2. `web/src/components/ImagePicker.jsx` (< 200 baris): Dua tombol (Pilih dari Galeri & Ambil Foto dengan `capture="environment"`), preview 4:3, info perbandingan ukuran sebelum & sesudah kompresi beserta rasio penghematan (%).
+  3. `web/src/pages/CalculatorPage.jsx` & subkomponen (`CalculatorProjectInfo.jsx`, `CalculatorBomBuilder.jsx`, `CalculatorSummary.jsx`): Pemilih komponen inventaris berkelompok `<optgroup>` per kategori, kuantitas kebutuhan > 0, proteksi duplikat instan, live calculation kesiapan & defisit belanja dari `bom.js`, auto-save draf `partsbin_draft_calculator` di `localStorage`, dan finalisasi simpan proyek + upload cover.
+  4. `web/src/components/ProjectShoppingCard.jsx`: Tombol "Bagikan Daftar Belanja" terintegrasi Web Share API (`navigator.share`) dengan fallback salin ke clipboard dan notifikasi toast (tombol nonaktif bila daftar belanja kosong).
+  5. `web/src/components/BottomNav.jsx`: Badge indikator jumlah komponen stok menipis pada tab Komponen (`tabular-nums`, target sentuh 44x44px terjaga, kontras rasio WCAG AA >= 4.5:1).
+  6. Seluruh berkas JSX/JS modular strictly < 200 baris, tanpa dependensi baru.

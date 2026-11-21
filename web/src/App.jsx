@@ -16,7 +16,7 @@ import ComponentListPage from './pages/ComponentListPage';
 import ComponentDetailPage from './pages/ComponentDetailPage';
 
 // Lazy loading halaman berat untuk menghemat ukuran bundle awal (JS gzip awal < 120 KB)
-const CalculatorPage = lazy(() => import('./pages/ProjectCreatePage'));
+const CalculatorPage = lazy(() => import('./pages/CalculatorPage'));
 const ProjectDetailPage = lazy(() => import('./pages/ProjectDetailPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 

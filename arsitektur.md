@@ -130,7 +130,7 @@ partsbin/
     │   │   ├── draftStorage.js       # Auto-save draf kalkulator & komponen di localStorage
     │   │   ├── dataCache.js          # In-memory cross-hook cache invalidation
     │   │   ├── bom.js                # Kalkulator rumus BOM terisolasi (live calculation)
-    │   │   └── imageCompress.js      # Kompresi Canvas API (createImageBitmap, max 1280px, < 500 KB)
+    │   │   └── imageCompress.js      # Kompresi Canvas API (createImageBitmap, max 1024px, target < 200 KB)
     │   ├── components/
     │   │   ├── modals/
     │   │   │   └── ConfirmModal.jsx        # Dialog konfirmasi (Pola 3 Modul 5)
@@ -351,7 +351,8 @@ Menerima opsi `{ syncUrl = true }`.
    - Berkas gambar **TIDAK IKUT** disimpan di localStorage.
 2. **Kompresi Gambar Canvas API (`web/src/utils/imageCompress.js`)**:
    - Menggunakan API bawaan `createImageBitmap` dan `HTMLCanvasElement`.
-   - Sisi terpanjang maksimal `1280px`, kualitas `0.8`, target `< 500 KB`.
+   - Sisi terpanjang maksimal `1024px`, kualitas dinamis `0.8 > 0.7 > 0.6`, target `< 200 KB` (mencoba WebP, fallback ke JPEG).
+   - Menggunakan `createImageBitmap` dengan opsi `{ imageOrientation: 'from-image' }` untuk menangani orientasi EXIF kamera mobile secara otomatis, dan memanggil `bitmap.close()` di blok `finally` untuk mencegah kebocoran memori perangkat.
 3. **Alur Finalisasi Proyek di Kalkulator**:
    - Tombol Finalisasi disabled saat offline (`!isOnline`).
    - Alur: `POST /api/projects` -> jika sukses & ada gambar: kompres via Canvas API lalu `POST /api/projects/:id/image` (jika upload gambar gagal: toast peringatan + tombol retry di detail, proyek tidak batal) -> hapus draf -> navigasikan ke `/projects/:id`.

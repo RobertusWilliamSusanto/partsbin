@@ -176,6 +176,7 @@ Format wajib: **Warna Solid + Ikon Lucide + Teks Jelas**.
 - **Warna Latar**: Permukaan netral `var(--surface-2)`.
 - **Perlakuan Objek**: `object-fit: cover; border-radius: 8px;`.
 - **Placeholder Statis (Tanpa Gambar)**: Bila proyek belum memiliki gambar, tampilkan kontainer rasio 4:3 dengan latar `var(--surface-2)`, garis batas `1px dashed var(--border)`, dan ikon terpusat `ImageIcon` (`lucide-react`, `size={32}`, warna `var(--text-muted)`) disertai teks kecil *"Belum ada foto proyek"*.
+- **Kompresi Canvas Mobile**: Maksimal sisi terpanjang `1024px`, loop kualitas `0.8 > 0.7 > 0.6`, target berkas `< 200 KB` (mencoba format WebP dengan fallback JPEG, `createImageBitmap` orientasi otomatis EXIF `from-image`).
 - **Larangan Skeleton / Shimmer**: Dilarang menggunakan animasi gradasi kedip-kedip (*shimmer skeleton*). Gunakan tampilan statis solid untuk meminimalkan beban komputasi CPU/GPU perangkat bergerak.
 
 ### D. Form Inline Komponen (`ComponentInlineForm.jsx`)
