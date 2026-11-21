@@ -97,11 +97,14 @@ html[data-theme='dark'] {
 | `text` di atas `bg` | `#0f172a` / `#f8fafc` (17.06:1) | `#f1f5f9` / `#0b0f17` (17.51:1) | AAA |
 | `text` di atas `surface` | `#0f172a` / `#ffffff` (17.85:1) | `#f1f5f9` / `#111827` (16.19:1) | AAA |
 | `text-muted` di atas `surface` | `#475569` / `#ffffff` (7.58:1) | `#94a3b8` / `#111827` (6.92:1) | AA |
+| `accent-contrast` di atas `accent` | `#ffffff` / `#1d4ed8` (6.70:1) | `#0b0f17` / `#60a5fa` (7.54:1) | AA |
 | `accent` di atas `accent-tint` | `#1d4ed8` / `#dbeafe` (5.49:1) | `#60a5fa` / `#172554` (5.78:1) | AA |
-| Chip `planned` di atas bg | `#475569` / `#f1f5f9` (6.92:1) | `#94a3b8` / `#1e293b` (5.71:1) | AA |
-| Chip `done` di atas bg | `#15803d` / `#dcfce7` (4.57:1) | `#4ade80` / `#052e16` (8.55:1) | AA |
-| Chip `warn` di atas `warn-tint` | `#b45309` / `#fef3c7` (5.02:1) | `#fbbf24` / `#451a03` (7.64:1) | AA |
-| Chip `danger` di atas `danger-tint` | `#b91c1c` / `#fee2e2` (5.60:1) | `#f87171` / `#450a0a` (5.88:1) | AA |
+| Chip `ok` di atas `ok-tint` | `#15803d` / `#dcfce7` (4.57:1) | `#4ade80` / `#052e16` (8.55:1) | AA |
+| Chip `warn` di atas `warn-tint` | `#b45309` / `#fef3c7` (4.51:1) | `#fbbf24` / `#451a03` (8.97:1) | AA |
+| Chip `danger` di atas `danger-tint` | `#b91c1c` / `#fee2e2` (5.30:1) | `#f87171` / `#450a0a` (5.84:1) | AA |
+| Chip `planned` di atas `planned-bg` | `#475569` / `#f1f5f9` (6.92:1) | `#94a3b8` / `#1e293b` (5.71:1) | AA |
+| Chip `in_progress` di atas `progress-bg` | `#1d4ed8` / `#eff6ff` (6.16:1) | `#60a5fa` / `#172554` (5.78:1) | AA |
+| Chip `done` di atas `done-bg` | `#15803d` / `#dcfce7` (4.57:1) | `#4ade80` / `#052e16` (8.55:1) | AA |
 
 ---
 

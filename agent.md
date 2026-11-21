@@ -141,7 +141,7 @@ Aturan Asisten Praktikum (Asprak) adalah **otoritas tertinggi**, berada di atas 
      - Form inline edit nama & deskripsi, dialog hapus (`ConfirmModal.jsx`), kartu kesiapan rakit (*Build Readiness %*), daftar item BOM, form tambah item ke BOM, dan kartu daftar belanja (*Shopping Deficit*).
   5. Perbarui `web/src/pages/ProfilePage.jsx` (`/profile`):
      - Identitas pembuat (Robertus William Susanto / 21120124120007), toggle tema, status jaringan, status draf tersimpan, dan penjelasan arsitektur v4.0.
-  6. **Pembersihan Berkas & Rute**: Hapus `ProjectListPage.jsx` dan `ProjectCreatePage.jsx`. Daftarkan rute baru di `App.jsx` (`/`, `/components`, `/components/:id`, `/calculator`, `/projects/:id`, `/profile`) serta tambahkan redirect otomatis `<Route path="/projects" element={<Navigate to="/" replace />} />`.
+  6. **Pembersihan Berkas & Rute**: Refactor `ProjectCreatePage.jsx` menjadi `CalculatorPage.jsx`; hapus berkas lama HANYA setelah `CalculatorPage.jsx` berfungsi dan gerbang R5/R6 lolos. Hapus `ProjectListPage.jsx` HANYA setelah `DashboardPage.jsx` memuat list proyek lengkap dan gerbang R5/R6 lolos. Daftarkan rute baru di `App.jsx` (`/`, `/components`, `/components/:id`, `/calculator`, `/projects/:id`, `/profile`) serta tambahkan redirect otomatis `<Route path="/projects" element={<Navigate to="/" replace />} />`.
   7. Jalankan cek aturan gerbang (R3–R7), verifikasi `npm run build`, commit Tahap 4 ke Git, lalu **BERHENTI dan laporkan**.
 
 ---

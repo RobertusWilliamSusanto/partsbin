@@ -31,6 +31,7 @@ PartsBin adalah Progressive Web App (PWA) manajemen inventaris komponen elektron
 3. Client-side filtering & client-side pagination via hook `usePagination(items, pageSize=6, { syncUrl = true })`. Dashboard dan Katalog Komponen menyinkronkan halaman ke URL query `?page=`. Pemilih komponen pada Kalkulator menggunakan state lokal React (`syncUrl: false`) agar tidak mengotori URL kalkulator.
 4. Pemisahan konsep: **Status Progres Pengerjaan** (`status`: `planned` | `in_progress` | `done`) vs **Kecukupan Stok Komponen** (*Build Readiness %*). Keduanya berdiri independen.
 5. **Keputusan Sadar**: Status `done` **TIDAK** mengurangi stok komponen secara otomatis di database. Teknisi mengoreksi fisik stok secara transparan melalui stepper di katalog/detail komponen guna mencegah pengurangan ganda.
+6. **Pencegahan Regresi List-Detail & Gerbang K6**: Pada implementasi frontend saat ini, `DashboardPage.jsx` hanya menampilkan subkumpulan proyek yang 100% siap rakit (`metrics.readyProjects`), bukan seluruh daftar proyek. Oleh karena itu, `ProjectListPage.jsx` **DILARANG DIHAPUS** pada tahap awal (Tahap 1B hingga Tahap 3). `ProjectListPage.jsx` baru boleh dihapus pada Tahap 4 HANYA SETELAH `DashboardPage.jsx` selesai ditingkatkan menjadi daftar proyek lengkap dengan filter status dan pagination client-side, guna memastikan aturan R5 (minimal 5 halaman fungsional) dan R6 (minimal 2 list-detail) tidak pernah terlanggar di sembarang commit.
 
 ---
 
@@ -44,7 +45,7 @@ PartsBin adalah Progressive Web App (PWA) manajemen inventaris komponen elektron
   - `"cors": "^2.8.5"`
   - `"dotenv": "^17.4.2"`
   - `"express": "^5.2.1"`
-  - `"multer": "^2.0.2"` (**Pengecualian Daftar Putih Resmi**: Versi 2.x terbaru, minimal `2.0.2`. Versi 1.x dilarang keras karena memiliki celah keamanan CVE. Digunakan secara khusus untuk menangani stream multipart in-memory `memoryStorage` limit 2 MB dan inspeksi magic bytes buffer sebelum diunggah ke Supabase Storage, tanpa menulis file sementara ke disk serverless Vercel).
+  - `"multer": "^2.5.0"` (**Pengecualian Daftar Putih Resmi**: Versi 2.x terbaru `^2.5.0`. Versi 1.x dilarang keras karena memiliki celah keamanan CVE. Digunakan secara khusus untuk menangani stream multipart in-memory `memoryStorage` limit 2 MB dan inspeksi magic bytes buffer sebelum diunggah ke Supabase Storage, tanpa menulis file sementara ke disk serverless Vercel).
 - `"devDependencies"`:
   - `"nodemon": "^3.1.14"`
 - **DILARANG**: Menambahkan ORM (Prisma, TypeORM, Sequelize), library upload selain multer 2.x, atau middleware berat lainnya.

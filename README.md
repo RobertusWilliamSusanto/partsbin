@@ -76,6 +76,8 @@ erDiagram
     uuid id PK
     varchar name
     text description
+    varchar status
+    text image_path
     timestamptz created_at
   }
 
@@ -99,13 +101,14 @@ partsbin/
 ├── api/
 │   ├── sql/
 │   │   ├── schema.sql
-│   │   └── seed.sql
+│   │   ├── seed.sql
+│   │   └── migration_v4.sql
 │   ├── src/
 │   │   ├── config/supabaseClient.js
 │   │   ├── models/{componentModel.js, projectModel.js, projectItemModel.js}
 │   │   ├── controllers/{componentController.js, projectController.js}
 │   │   ├── routes/{componentRoutes.js, projectRoutes.js}
-│   │   ├── middlewares/errorHandler.js
+│   │   ├── middlewares/{errorHandler.js, upload.js}
 │   │   └── index.js
 │   ├── requests.http
 │   ├── vercel.json
@@ -147,20 +150,24 @@ partsbin/
 
 ## 5. Pemetaan Aturan Wajib Asprak -> Bukti Implementasi
 
-| Aturan Wajib Asprak | Bukti Implementasi di Aplikasi |
-| :--- | :--- |
-| REST API buatan sendiri sesuai Modul 1 (`supabaseClient.js`, `routes -> controllers -> models`) | `api/src/config/supabaseClient.js`, `api/src/routes/`, `api/src/controllers/`, `api/src/models/`, `api/src/middlewares/errorHandler.js` |
-| Navigasi bawah (*Bottom Navigation Bar*, mobile-first) + responsif desktop | `web/src/components/BottomNav.jsx` (tampil `< 768px`), `web/src/components/TopBar.jsx` (navigasi horizontal `>= 768px`), `web/src/App.css` |
-| Minimal 5 halaman (tersedia 7 rute halaman) | `web/src/App.jsx`: `/`, `/components`, `/components/:id`, `/projects`, `/projects/new`, `/projects/:id`, `/profile` |
-| Minimal 2 halaman *List* yang itemnya bisa diklik ke halaman *Detail* | `ComponentListPage.jsx` -> `ComponentDetailPage.jsx` (`/components/:id`) dan `ProjectListPage.jsx` -> `ProjectDetailPage.jsx` (`/projects/:id`) |
-| 1 halaman *Profile/About* | `web/src/pages/ProfilePage.jsx` + data sumber tunggal `web/src/config/profile.js` |
-| Pola Modul 5 (Axios interceptor, Service/Hook, `ConfirmModal`, `draftStorage`) | `web/src/config/api.js`, `web/src/services/`, `web/src/hooks/`, `web/src/components/modals/ConfirmModal.jsx`, `web/src/utils/draftStorage.js` |
-| Monorepo publik tanpa file `.env` / secret | `.gitignore` mengabaikan `.env` dan `.env.*` (kecuali `!**/.env.example`), terverifikasi lewat `git status` & `git log` |
-| Deploy produksi di Vercel (2 project: `api` dan `web`) | Frontend: https://partsbin-web.vercel.app ; Backend: https://partsbin-api.vercel.app/api |
+| Kode | Aturan Wajib Asprak | Status Verifikasi | Bukti Implementasi di Aplikasi |
+| :---: | :--- | :---: | :--- |
+| **R1** | Tugas individu | MANUAL OLEH PRAKTIKAN | Pengerjaan mandiri oleh Robertus William Susanto (NIM: 21120124120007). |
+| **R2** | Platform: Progressive Web App / PWA (`React` + `Vite` + `vite-plugin-pwa`, service worker, manifest, installable, offline runtime caching) | TERVERIFIKASI (KODE + DEPLOY) | `web/vite.config.js` (`VitePWA`, Workbox runtimeCaching), `web/src/components/PWABadge.jsx`, `web/index.html` (manifest + theme-color), verifikasi installable di Chrome/Edge DevTools. |
+| **R3** | Memakai REST API (web service) buatan sendiri mengikuti arsitektur Modul 1 (`Express 5` + `Supabase`, folder `api/src/{config,routes,controllers,models}`, requests.http ada, web/src bersih dari supabase-js) | TERVERIFIKASI (KODE) | `api/src/config/supabaseClient.js`, `api/src/routes/`, `api/src/controllers/`, `api/src/models/`, `api/src/middlewares/errorHandler.js`, `api/requests.http`, `web/src/` bebas dari `@supabase/supabase-js`. |
+| **R4** | Memiliki *Bottom Navigation Bar* (*mobile-first*) yang terpasang konsisten di seluruh rute utama | TERVERIFIKASI (KODE) | `web/src/components/BottomNav.jsx` (tampil `< 768px`), `web/src/components/TopBar.jsx` (navigasi horizontal `>= 768px`), `web/src/App.css`. |
+| **R5** | Minimal 5 halaman fungsional (PartsBin memiliki 6 rute halaman fungsional) | TERVERIFIKASI (KODE) | `web/src/App.jsx`: `/`, `/components`, `/components/:id`, `/calculator`, `/projects/:id`, `/profile`. |
+| **R6** | Minimal 2 halaman utama berisi *list*, setiap item bisa diklik menuju halaman *detail* | TERVERIFIKASI (KODE) | List 1: `/components` -> `/components/:id` (`ComponentListPage.jsx` -> `ComponentDetailPage.jsx`); List 2: Dashboard `/` -> `/projects/:id` (`DashboardPage.jsx` -> `ProjectDetailPage.jsx`). |
+| **R7** | Memiliki 1 halaman *Profile/About* (`/profile`) | TERVERIFIKASI (KODE) | `web/src/pages/ProfilePage.jsx` + data sumber tunggal `web/src/config/profile.js`. |
+| **R8** | Seluruh *source code* wajib tersimpan di repositori GitHub publik | MENUNGGU PUSH (MANUAL OLEH PRAKTIKAN) | https://github.com/RobertusWilliamSusanto/partsbin (menunggu push manual oleh praktikan ke branch `main`). |
+| **R9** | Judul dan topik tidak boleh sama dengan praktikan lain di platform yang sama | MANUAL OLEH PRAKTIKAN | Topik: Katalog Komponen Mikro & Kalkulator BOM Proyek Elektronika. |
+| **R10** | Mengikuti asistensi minimal 1x dan mengisi lembar asistensi | MANUAL OLEH PRAKTIKAN | Dijadwalkan sebelum batas akhir asistensi. |
+| **R11** | PWA wajib di-deploy di free hosting (Vercel); tautan repositori dicantumkan di kolom GitHub | TERVERIFIKASI (KODE + DEPLOY) | Frontend: https://partsbin-web.vercel.app ; Backend: https://partsbin-api.vercel.app/api. |
+| **R12** | Rentang pengerjaan 13–24 Nov 2026, responsi 25–28 Nov 2026; dilarang Protect Cell sebelum memiliki judul | MANUAL OLEH PRAKTIKAN | Jadwal pengerjaan dipatuhi oleh praktikan. |
 
 ---
 
-## 6. Spesifikasi 14 Endpoint REST API (`/api`)
+## 6. Spesifikasi 16 Endpoint REST API (`/api`)
 
 | No | Method | Path | Sukses | Gagal |
 | :- | :--- | :--- | :---: | :---: |
@@ -178,6 +185,8 @@ partsbin/
 | 12 | `DELETE` | `/api/projects/:id` | `200` | `400`, `404` |
 | 13 | `POST` | `/api/projects/:id/items` | `201` | `400`, `404`, `409` |
 | 14 | `DELETE` | `/api/projects/:id/items/:itemId` | `200` | `400`, `404` |
+| 15 | `PATCH` | `/api/projects/:id/status` | `200` | `400`, `404` |
+| 16 | `POST` | `/api/projects/:id/image` | `200` | `400`, `404`, `413` |
 
 ### Contoh Pengujian `curl` (Teks Polos)
 
