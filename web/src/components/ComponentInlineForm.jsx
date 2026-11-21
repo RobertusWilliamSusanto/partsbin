@@ -10,8 +10,7 @@ import {
   clearComponentDraft,
   formatDraftTime,
 } from '../utils/draftStorage';
-
-const CATEGORIES = ['MCU', 'Sensor', 'Passive', 'Power', 'Actuator', 'Connector', 'Display'];
+import ComponentFormFields from './ComponentFormFields';
 
 const EMPTY_FORM = {
   name: '',
@@ -36,7 +35,7 @@ function toFormState(initialData) {
   };
 }
 
-// Form inline terintegrasi (tanpa pop-up modal) untuk Tambah Komponen (panel collapsible) & Edit in-place
+// Form inline terintegrasi (tanpa pop-up modal) untuk Tambah Komponen & Edit in-place
 export default function ComponentInlineForm({ initialData = null, onCancel, onSaved }) {
   const isEdit = Boolean(initialData?.id);
   const isOnline = useOnlineStatus();
@@ -58,25 +57,23 @@ export default function ComponentInlineForm({ initialData = null, onCancel, onSa
     const next = { ...form, [field]: value };
     setForm(next);
 
-    // Kenapa debounce 400ms? Menghindari JSON.stringify + localStorage.setItem sinkron di setiap ketikan.
     if (!isEdit) {
       if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
       draftTimerRef.current = setTimeout(() => {
-        const savedAt = saveComponentDraft(next);
-        setLastSavedAt(savedAt);
+        const saved = saveComponentDraft(next);
+        if (saved) setLastSavedAt(saved.savedAt);
       }, 400);
     }
   };
 
   const handleLoadDraft = () => {
-    if (!savedDraft?.data) return;
-    setForm({ ...EMPTY_FORM, ...savedDraft.data });
-    setLastSavedAt(savedDraft.savedAt || null);
+    if (!savedDraft) return;
+    setForm(toFormState(savedDraft));
+    setLastSavedAt(savedDraft.savedAt);
     setSavedDraft(null);
   };
 
   const handleDiscardDraft = () => {
-    if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
     clearComponentDraft();
     setSavedDraft(null);
     setLastSavedAt(null);
@@ -84,6 +81,10 @@ export default function ComponentInlineForm({ initialData = null, onCancel, onSa
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!isOnline) {
+      setError('Aksi ini memerlukan koneksi internet. Anda sedang offline.');
+      return;
+    }
     setError(null);
 
     const payload = {
@@ -103,20 +104,17 @@ export default function ComponentInlineForm({ initialData = null, onCancel, onSa
 
     setSubmitting(true);
     try {
-      const res = isEdit
-        ? await componentService.update(initialData.id, payload)
-        : await componentService.create(payload);
-
+      let res;
       if (isEdit) {
+        res = await componentService.update(initialData.id, payload);
         updateComponentInCache(res.data);
       } else {
-        if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+        res = await componentService.create(payload);
         clearComponentDraft();
         invalidateComponentsCache();
       }
-      // Harga / stok berubah dapat mempengaruhi biaya & readiness proyek
       invalidateProjectsCache();
-      onSaved?.(res.data);
+      if (onSaved) onSaved(res.data);
     } catch (err) {
       setError(err?.message || 'Gagal menyimpan data komponen.');
     } finally {
@@ -168,104 +166,7 @@ export default function ComponentInlineForm({ initialData = null, onCancel, onSa
       )}
 
       <form className="stack-md" onSubmit={handleSubmit}>
-        <div className="form-grid-desktop">
-          <div className="form-group">
-            <label className="form-label" htmlFor="comp-name">Nama Komponen</label>
-            <input
-              id="comp-name"
-              className="form-input"
-              value={form.name}
-              onChange={(e) => handleChange('name', e.target.value)}
-              placeholder="Contoh: ESP32-WROOM-32 DevKit"
-              maxLength={120}
-              required
-            />
-          </div>
-
-          <div className="form-grid-2">
-            <div className="form-group">
-              <label className="form-label" htmlFor="comp-category">Kategori</label>
-              <select
-                id="comp-category"
-                className="form-select"
-                value={form.category}
-                onChange={(e) => handleChange('category', e.target.value)}
-              >
-                {CATEGORIES.map((cat) => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label" htmlFor="comp-bin">Lokasi Laci</label>
-              <input
-                id="comp-bin"
-                className="form-input"
-                value={form.bin_location}
-                onChange={(e) => handleChange('bin_location', e.target.value)}
-                placeholder="Contoh: A-01"
-                maxLength={40}
-                required
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="form-grid-3">
-          <div className="form-group">
-            <label className="form-label" htmlFor="comp-stock">Stok Saat Ini</label>
-            <input
-              id="comp-stock"
-              type="number"
-              min="0"
-              step="1"
-              className="form-input num"
-              value={form.stock}
-              onChange={(e) => handleChange('stock', e.target.value)}
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label" htmlFor="comp-min-stock">Stok Minimum</label>
-            <input
-              id="comp-min-stock"
-              type="number"
-              min="0"
-              step="1"
-              className="form-input num"
-              value={form.min_stock}
-              onChange={(e) => handleChange('min_stock', e.target.value)}
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label" htmlFor="comp-price">Harga Satuan (Rp)</label>
-            <input
-              id="comp-price"
-              type="number"
-              min="0"
-              step="1"
-              className="form-input num"
-              value={form.unit_price}
-              onChange={(e) => handleChange('unit_price', e.target.value)}
-              required
-            />
-          </div>
-        </div>
-
-        <div className="form-group">
-          <label className="form-label" htmlFor="comp-specs">Spesifikasi Teknis</label>
-          <textarea
-            id="comp-specs"
-            className="form-textarea"
-            value={form.specs}
-            onChange={(e) => handleChange('specs', e.target.value)}
-            placeholder="Tegangan kerja, paket SMD/THT, catatan pinout..."
-          />
-        </div>
+        <ComponentFormFields form={form} onChange={handleChange} />
 
         {!isEdit && lastSavedAt && (
           <div className="row-between">

@@ -131,7 +131,14 @@ Aturan Asisten Praktikum (Asprak) adalah **otoritas tertinggi**, berada di atas 
 ---
 
 ### TAHAP 5 — PWA Offline Gambar, Service Worker, Preview, & README (`web/` & root)
-- **Tujuan**: Mengonfigurasi Service Worker PWA untuk offline caching data dan gambar Supabase Storage, pengujian build produksi, dan penyempurnaan dokumentasi.
+- **Status Repo**: **SELESAI**
+- **Cakupan Selesai**:
+  1. Ikon PWA maskable resolusi 192x192 (`icon-192.png`) dan 512x512 (`icon-512.png`) digenerate via Node.js murni (zlib + Buffer) dalam safe zone 80%.
+  2. `web/vite.config.js` terpasang `VitePWA` dengan `registerType: 'autoUpdate'`, manifest lengkap, `navigateFallback: '/index.html'` dengan `navigateFallbackDenylist: [/^\/api/]`.
+  3. Workbox `runtimeCaching`: API (`NetworkFirst`, timeout 5s, `partsbin-api-cache`) matcher fungsi lintas-origin `({ url }) => url.pathname.startsWith('/api/')` dan gambar Supabase Storage (`CacheFirst`, max 60 entries, 30 hari, `partsbin-images`).
+  4. Guard offline untuk seluruh mutasi data tulis (stepper stok, ubah status, form tambah/edit, hapus proyek & item BOM) memakai `useOnlineStatus`.
+  5. Konfigurasi deploy Vercel siap: `web/vercel.json` SPA rewrite, `api/vercel.json`, CORS whitelist tanpa wildcard `*`, environment variable `VITE_API_URL` dan `CORS_ORIGIN`.
+  6. File-size discipline: seluruh file JSX/JS modular strictly < 200 baris.
 - **Tugas**:
   1. Siapkan aset ikon PWA di `web/public/icon-192.png` dan `web/public/icon-512.png`. Tambahkan `<link rel="apple-touch-icon" href="/icon-192.png" />` di `web/index.html`.
   2. Buat `web/vercel.json` berisi rewrite SPA `/(.*)` -> `/index.html`.

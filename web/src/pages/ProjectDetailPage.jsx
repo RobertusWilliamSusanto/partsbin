@@ -1,16 +1,16 @@
 import { useState } from 'react';
 import { Link, useParams, useNavigate, useLocation } from 'react-router-dom';
-import { Pencil, Trash2, Plus, Save, CheckCircle2, AlertTriangle, AlertCircle, X } from 'lucide-react';
+import { Pencil, Trash2, Plus, AlertTriangle, X } from 'lucide-react';
 import { useProject, invalidateProjectsCache } from '../hooks/useProjects';
 import { useComponents, invalidateComponentsCache } from '../hooks/useComponents';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import projectService from '../services/projectService';
-import { formatRupiah } from '../utils/format';
 import ConfirmModal from '../components/modals/ConfirmModal';
 import ProjectCover from '../components/ProjectCover';
 import ProjectStatusChanger from '../components/ProjectStatusChanger';
 import ProjectReadinessCard from '../components/ProjectReadinessCard';
 import ProjectShoppingCard from '../components/ProjectShoppingCard';
+import ProjectBomList from '../components/ProjectBomList';
 
 export default function ProjectDetailPage() {
   const { id } = useParams();
@@ -36,7 +36,11 @@ export default function ProjectDetailPage() {
   const [toastError, setToastError] = useState(() => location.state?.warning || null);
 
   const handleStatusChange = async (newStatus) => {
-    if (!project || !isOnline || updatingStatus || project.status === newStatus) return;
+    if (!project || updatingStatus || project.status === newStatus) return;
+    if (!isOnline) {
+      setToastError('Aksi ubah status dinonaktifkan saat mode offline.');
+      return;
+    }
     setUpdatingStatus(true);
     setToastError(null);
     try {
@@ -51,7 +55,11 @@ export default function ProjectDetailPage() {
 
   const handleSaveEdit = async (e) => {
     e.preventDefault();
-    if (!project || !isOnline) return;
+    if (!project) return;
+    if (!isOnline) {
+      setToastError('Aksi edit proyek dinonaktifkan saat mode offline.');
+      return;
+    }
     const trimmed = editName.trim();
     if (!trimmed) return setToastError('Nama proyek wajib diisi.');
     setSavingEdit(true);
@@ -68,7 +76,11 @@ export default function ProjectDetailPage() {
   };
 
   const handleDeleteProject = async () => {
-    if (!project || !isOnline) return;
+    if (!project) return;
+    if (!isOnline) {
+      setToastError('Aksi hapus proyek dinonaktifkan saat mode offline.');
+      return;
+    }
     setDeleting(true);
     try {
       await projectService.remove(project.id);
@@ -84,7 +96,11 @@ export default function ProjectDetailPage() {
   };
 
   const handleDeleteItem = async () => {
-    if (!project || !itemToDelete || !isOnline) return;
+    if (!project || !itemToDelete) return;
+    if (!isOnline) {
+      setToastError('Aksi hapus item BOM dinonaktifkan saat mode offline.');
+      return;
+    }
     setDeleting(true);
     try {
       await projectService.removeItem(project.id, itemToDelete.id);
@@ -101,7 +117,11 @@ export default function ProjectDetailPage() {
 
   const handleAddItem = async (e) => {
     e.preventDefault();
-    if (!project || !isOnline || !selectedCompId) return;
+    if (!project || !selectedCompId) return;
+    if (!isOnline) {
+      setToastError('Aksi tambah item BOM dinonaktifkan saat mode offline.');
+      return;
+    }
     setAddingItem(true);
     try {
       await projectService.addItem(project.id, { component_id: selectedCompId, quantity_needed: Number(qtyNeeded) || 1 });
@@ -138,17 +158,11 @@ export default function ProjectDetailPage() {
         <ProjectCover url={project.image_url} alt={project.name} />
         {isEditing ? (
           <form className="stack-md" onSubmit={handleSaveEdit}>
-            <div className="form-group">
-              <label className="form-label" htmlFor="p-name">Nama Proyek</label>
-              <input id="p-name" className="form-input" value={editName} onChange={(e) => setEditName(e.target.value)} required />
-            </div>
-            <div className="form-group">
-              <label className="form-label" htmlFor="p-desc">Deskripsi</label>
-              <textarea id="p-desc" className="form-textarea" value={editDesc} onChange={(e) => setEditDesc(e.target.value)} />
-            </div>
+            <input type="text" className="form-input" value={editName} onChange={(e) => setEditName(e.target.value)} required />
+            <textarea className="form-textarea" rows={3} value={editDesc} onChange={(e) => setEditDesc(e.target.value)} placeholder="Deskripsi..." />
             <div className="row-wrap">
-              <button type="button" className="btn btn--outline" onClick={() => setIsEditing(false)}>Batal</button>
-              <button type="submit" className="btn btn--primary" disabled={savingEdit}><Save size={18} /><span>{savingEdit ? 'Menyimpan...' : 'Simpan'}</span></button>
+              <button type="submit" className="btn btn--primary" style={{ flex: 1 }} disabled={savingEdit || !isOnline}><span>Simpan</span></button>
+              <button type="button" className="btn btn--outline" style={{ flex: 1 }} onClick={() => setIsEditing(false)}><span>Batal</span></button>
             </div>
           </form>
         ) : (
@@ -164,30 +178,7 @@ export default function ProjectDetailPage() {
       </div>
 
       <ProjectReadinessCard summary={summary} />
-
-      <div>
-        <div className="list-head"><h2>Daftar Item BOM</h2><span className="count">{items.length} item</span></div>
-        {items.length === 0 ? <div className="card empty-state"><p>BOM masih kosong. Tambahkan komponen di bawah.</p></div> : (
-          <ul className="stock">
-            {items.map((it) => (
-              <li key={it.id} className="card stack-sm">
-                <div className="card-head">
-                  <Link to={`/components/${it.component_id}`} className="card-title">{it.component_name}</Link>
-                  <button type="button" className="icon-btn" onClick={() => setItemToDelete(it)} disabled={!isOnline}><Trash2 size={18} /></button>
-                </div>
-                <div className="row-wrap">
-                  <span className="mono-badge">{it.bin_location}</span>
-                  <span className={`chip chip--${it.is_enough ? 'ok' : 'danger'}`}>
-                    {it.is_enough ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
-                    <span>{it.is_enough ? 'Cukup' : `Kurang ${it.shortage_qty}`}</span>
-                  </span>
-                </div>
-                <div className="row-between"><span className="count">Stok: {it.stock_available} / Butuh: {it.quantity_needed}</span><span className="price">{formatRupiah(it.item_total_cost)}</span></div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      <ProjectBomList items={items} isOnline={isOnline} onRequestDelete={(it) => setItemToDelete(it)} />
 
       <div className="card stack-md">
         <h2 className="card-title">Tambah Komponen ke BOM</h2>

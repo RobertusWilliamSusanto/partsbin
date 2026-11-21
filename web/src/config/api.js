@@ -1,6 +1,9 @@
 import axios from 'axios';
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+const BASE_URL =
+  import.meta.env.VITE_API_URL ||
+  import.meta.env.VITE_API_BASE_URL ||
+  'http://localhost:3000/api';
 
 // Pola 1 Modul 5: satu instance Axios dengan interceptor untuk membuka res.data dan menormalisasi error
 const apiClient = axios.create({

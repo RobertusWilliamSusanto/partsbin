@@ -8,12 +8,16 @@ import { errorHandler } from './middlewares/errorHandler.js';
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 
-// Daftar origin frontend yang diizinkan mengakses API (mendukung CORS_ORIGINS atau FRONTEND_URL, dipisahkan koma)
-const envOrigins = process.env.CORS_ORIGINS || process.env.FRONTEND_URL || '';
+// Daftar origin frontend yang diizinkan mengakses API (mendukung CORS_ORIGIN, CORS_ORIGINS, atau FRONTEND_URL, tanpa wildcard *)
+const envOrigins =
+  process.env.CORS_ORIGIN ||
+  process.env.CORS_ORIGINS ||
+  process.env.FRONTEND_URL ||
+  '';
 const configuredOrigins = envOrigins
   .split(',')
   .map((origin) => origin.trim())
-  .filter(Boolean);
+  .filter((origin) => Boolean(origin) && origin !== '*');
 
 const allowedOrigins = new Set([
   'http://localhost:5173',

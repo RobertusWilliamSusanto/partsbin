@@ -1,10 +1,7 @@
 import { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
 import {
   Plus,
-  Minus,
   AlertTriangle,
-  CheckCircle2,
   RefreshCw,
   PackageOpen,
   X,
@@ -14,9 +11,9 @@ import { invalidateProjectsCache } from '../hooks/useProjects';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { usePagination } from '../hooks/usePagination';
 import componentService from '../services/componentService';
-import { formatRupiah } from '../utils/format';
 import FilterBar from '../components/FilterBar';
 import ComponentInlineForm from '../components/ComponentInlineForm';
+import ComponentCardItem from '../components/ComponentCardItem';
 import Pagination from '../components/Pagination';
 
 const CATEGORY_PILLS = ['ALL', 'MCU', 'Sensor', 'Passive', 'Power', 'Actuator', 'Connector', 'Display'].map((v) => ({
@@ -52,14 +49,18 @@ export default function ComponentListPage() {
 
   // Pagination client-side terikat URL query ?page= (reset saat filter berubah)
   const resetKey = `${search}:${category}:${onlyLowStock}`;
-  const { page, totalPages, pageItems, total, from, to, setPage } = usePagination(
+  const { page, totalPages, pageItems, total, setPage } = usePagination(
     filteredComponents,
     { pageSize: 6, syncUrl: true, resetKey }
   );
 
   const handleStepStock = async (comp, delta) => {
+    if (!isOnline) {
+      setToastError('Aksi ubah stok dinonaktifkan saat mode offline.');
+      return;
+    }
     const nextStock = comp.stock + delta;
-    if (nextStock < 0 || !isOnline) return;
+    if (nextStock < 0) return;
 
     setUpdatingId(comp.id);
     setToastError(null);
@@ -143,11 +144,6 @@ export default function ComponentListPage() {
 
       {!loading && !error && (
         <>
-          <div className="list-head">
-            <h2>Daftar Inventaris</h2>
-            <span className="count">{total > 0 ? `Menampilkan ${from}–${to} dari ${total}` : '0 item'}</span>
-          </div>
-
           {total === 0 ? (
             <div className="card empty-state">
               <PackageOpen size={20} strokeWidth={1.75} aria-hidden="true" />
@@ -156,42 +152,15 @@ export default function ComponentListPage() {
           ) : (
             <>
               <ul className="stock stock--components">
-                {pageItems.map((comp) => {
-                  const isBusy = updatingId === comp.id;
-                  return (
-                    <li key={comp.id} className="card card--interactive card--flex">
-                      <Link to={`/components/${comp.id}`} className="card-link-area">
-                        <div className="card-head">
-                          <span className="card-title">{comp.name}</span>
-                          <span className={`chip chip--${comp.is_low_stock ? 'warn' : 'ok'}`}>
-                            {comp.is_low_stock ? <AlertTriangle size={20} strokeWidth={1.75} aria-hidden="true" /> : <CheckCircle2 size={20} strokeWidth={1.75} aria-hidden="true" />}
-                            <span>{comp.is_low_stock ? 'Stok Menipis' : 'Cukup'}</span>
-                          </span>
-                        </div>
-                        <div className="row-wrap">
-                          <span className="chip chip--neutral">{comp.category}</span>
-                          <span className="mono-badge">{comp.bin_location}</span>
-                        </div>
-                      </Link>
-                      <hr className="card-divider" />
-                      <div className="row-between">
-                        <div>
-                          <div className="price">{formatRupiah(comp.unit_price)}</div>
-                          <div className="count">Min. stok: {comp.min_stock} pcs</div>
-                        </div>
-                        <div className="stepper" aria-label={`Atur stok ${comp.name}`}>
-                          <button type="button" className="stepper-btn" onClick={() => handleStepStock(comp, -1)} disabled={comp.stock === 0 || !isOnline || isBusy} aria-label={`Kurangi stok ${comp.name}`}>
-                            <Minus size={20} strokeWidth={1.75} aria-hidden="true" />
-                          </button>
-                          <span className="stepper-val">{comp.stock}</span>
-                          <button type="button" className="stepper-btn" onClick={() => handleStepStock(comp, 1)} disabled={!isOnline || isBusy} aria-label={`Tambah stok ${comp.name}`}>
-                            <Plus size={20} strokeWidth={1.75} aria-hidden="true" />
-                          </button>
-                        </div>
-                      </div>
-                    </li>
-                  );
-                })}
+                {pageItems.map((comp) => (
+                  <ComponentCardItem
+                    key={comp.id}
+                    comp={comp}
+                    isOnline={isOnline}
+                    isBusy={updatingId === comp.id}
+                    onStepStock={handleStepStock}
+                  />
+                ))}
               </ul>
               <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
             </>
