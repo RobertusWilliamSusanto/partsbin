@@ -20,14 +20,17 @@ Sistem desain menggunakan pendekatan **Technician's Bench Notebook** (*Precision
 
 ## 2. Fitur Utama & Kalkulator BOM
 
-1. **Dashboard Meja Kerja (`/`)**: Menampilkan 4 kartu statistik (Total Jenis Komponen, Estimasi Nilai Aset Rp, Komponen Stok Menipis, Proyek Siap Rakit 100%), daftar peringatan stok menipis, dan daftar proyek siap rakit 100%.
+1. **Dashboard Meja Kerja (`/`)**: Menampilkan seluruh daftar proyek dengan filter status live (Semua, Direncanakan, Dikerjakan, Selesai; tersinkronisasi `?status=`), kartu proyek dengan thumbnail rasio 4:3 (`ProjectCover`), `StatusChip`, progress bar kesiapan rakit BOM, dan pagination client-side (`pageSize: 6`).
 2. **Katalog Komponen (`/components`) & Detail (`/components/:id`)**:
    - Pencarian & filter kategori + filter "Stok Menipis" secara instan di browser (*client-side filtering*).
    - Stepper koreksi stok cepat `-1 / +1` melalui `PATCH /api/components/:id/stock`.
    - Panel form inline collapsible (`ComponentInlineForm.jsx`) dengan auto-save draf ter-debounce 400ms (`localStorage`) pada mode tambah serta inline edit pada halaman detail.
    - Proteksi `ON DELETE RESTRICT` (`409 Conflict`) bila komponen masih terdaftar pada BOM proyek, lengkap dengan daftar `used_in_projects`.
-3. **Proyek BOM (`/projects`), Alur Unified (`/projects/new`), & Detail (`/projects/:id`)**:
-   - **Buat Proyek + BOM Sekaligus (`/projects/new` — `ProjectCreatePage.jsx`)**: Isi nama & deskripsi proyek sekaligus pilih beberapa komponen BOM + jumlah kebutuhan dalam satu halaman dengan *live preview* estimasi biaya dan prediksi kesiapan rakit (`POST /api/projects` dilanjutkan paralel `Promise.allSettled` ke `POST /api/projects/:id/items`).
+   - Pagination client-side (`usePagination`, `pageSize: 6`, tersinkronisasi `?page=`).
+3. **Kalkulator BOM (`/calculator`) & Detail Proyek (`/projects/:id`)**:
+   - **Perencanaan Proyek & BOM (`/calculator`)**: Pemilihan komponen inventaris + jumlah kebutuhan dengan live kalkulasi estimasi biaya dan kesiapan rakit BOM.
+   - **Detail Proyek (`/projects/:id`)**: Dokumentasi sampul rasio 4:3 (`ProjectCover`), pengubah status pengerjaan fisik 3 tombol (`planned`, `in_progress`, `done`), kartu kesiapan rakit (*Build Readiness %*), daftar item BOM, penambahan item komponen, dan kartu daftar belanja (*Shopping Deficit*).
+   - Rute `/projects` dialihkan otomatis (`Navigate replace`) ke `/`.
    - **Kalkulator Kesiapan Rakit (*Build Readiness %*) & Daftar Belanja (*Shopping Deficit*)**:
      - `is_low_stock = stock <= min_stock`
      - `shortage_qty = Math.max(0, quantity_needed - stock_available)`
@@ -119,21 +122,26 @@ partsbin/
     │   ├── config/{api.js, profile.js}
     │   ├── services/{componentService.js, projectService.js}
     │   ├── hooks/{useComponents.js, useProjects.js, useOnlineStatus.js, useTheme.js}
-    │   ├── utils/{dataCache.js, draftStorage.js, format.js}
+    │   ├── utils/{dataCache.js, draftStorage.js, format.js, paginate.js, bom.js}
     │   ├── components/
     │   │   ├── modals/ConfirmModal.jsx
     │   │   ├── ComponentInlineForm.jsx
     │   │   ├── TopBar.jsx
     │   │   ├── BottomNav.jsx
     │   │   ├── FilterBar.jsx
+    │   │   ├── Pagination.jsx
+    │   │   ├── StatusChip.jsx
+    │   │   ├── ProjectCover.jsx
+    │   │   ├── ProjectStatusChanger.jsx
+    │   │   ├── ProjectReadinessCard.jsx
+    │   │   ├── ProjectShoppingCard.jsx
     │   │   ├── PWABadge.jsx
     │   │   └── ThemeToggle.jsx
     │   ├── pages/
     │   │   ├── DashboardPage.jsx          (Route: /)
     │   │   ├── ComponentListPage.jsx      (Route: /components)
     │   │   ├── ComponentDetailPage.jsx    (Route: /components/:id)
-    │   │   ├── ProjectListPage.jsx        (Route: /projects)
-    │   │   ├── ProjectCreatePage.jsx      (Route: /projects/new)
+    │   │   ├── ProjectCreatePage.jsx      (Route: /calculator)
     │   │   ├── ProjectDetailPage.jsx      (Route: /projects/:id)
     │   │   └── ProfilePage.jsx            (Route: /profile)
     │   ├── App.css
@@ -155,7 +163,7 @@ partsbin/
 | **R1** | Tugas individu | MANUAL OLEH PRAKTIKAN | Pengerjaan mandiri oleh Robertus William Susanto (NIM: 21120124120007). |
 | **R2** | Platform: Progressive Web App / PWA (`React` + `Vite` + `vite-plugin-pwa`, service worker, manifest, installable, offline runtime caching) | MENUNGGU TAHAP 5 | Ikon PWA (`icon-192.png`, `icon-512.png`), `vite-plugin-pwa`, dan service worker `dist/sw.js` dikonfigurasi pada Tahap 5. |
 | **R3** | Memakai REST API (web service) buatan sendiri mengikuti arsitektur Modul 1 (`Express 5` + `Supabase`, folder `api/src/{config,routes,controllers,models}`, requests.http ada, web/src bersih dari supabase-js) | TERVERIFIKASI (KODE) | `api/src/config/supabaseClient.js`, `api/src/routes/`, `api/src/controllers/`, `api/src/models/`, `api/src/middlewares/errorHandler.js`, `api/requests.http`, `web/src/` bebas dari `@supabase/supabase-js`. |
-| **R4** | Memiliki *Bottom Navigation Bar* (*mobile-first*) yang terpasang konsisten di seluruh rute utama | TERVERIFIKASI (KODE) | `web/src/components/BottomNav.jsx` (tampil `< 768px`), `web/src/components/TopBar.jsx` (navigasi horizontal `>= 768px`), `web/src/App.css`. |
+| **R4** | Memiliki *Bottom Navigation Bar* (*mobile-first*) yang terpasang konsisten di seluruh rute utama | TERVERIFIKASI (KODE) | `web/src/components/BottomNav.jsx` (4 tab: Dashboard, Komponen, Kalkulator, Profil; aktif di seluruh lebar layar dengan container `max-width: 480px` terpusat), `web/src/App.css`. |
 | **R5** | Minimal 5 halaman fungsional (PartsBin memiliki 6 rute halaman fungsional) | TERVERIFIKASI (KODE) | `web/src/App.jsx`: `/`, `/components`, `/components/:id`, `/calculator`, `/projects/:id`, `/profile`. |
 | **R6** | Minimal 2 halaman utama berisi *list*, setiap item bisa diklik menuju halaman *detail* | TERVERIFIKASI (KODE) | List 1: `/components` -> `/components/:id` (`ComponentListPage.jsx` -> `ComponentDetailPage.jsx`); List 2: Dashboard `/` -> `/projects/:id` (`DashboardPage.jsx` -> `ProjectDetailPage.jsx`). |
 | **R7** | Memiliki 1 halaman *Profile/About* (`/profile`) | TERVERIFIKASI (KODE) | `web/src/pages/ProfilePage.jsx` + data sumber tunggal `web/src/config/profile.js`. |

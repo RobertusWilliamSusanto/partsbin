@@ -27,11 +27,16 @@ PartsBin adalah Progressive Web App (PWA) manajemen inventaris komponen elektron
 
 ### Keputusan Teknis Mandiri (Jujur untuk Responsi):
 1. Penggunaan `react-router-dom` v7 agar seluruh rute memiliki URL unik (`/`, `/components`, `/components/:id`, `/calculator`, `/projects/:id`, `/profile`) dan navigasi *Back* perangkat mobile berfungsi di mode PWA *standalone*. Rute `/projects` dialihkan otomatis (`Navigate replace`) ke `/`.
-2. Navigasi utama BottomNav 4 tab: Dashboard (`/`), Komponen (`/components`), Kalkulator (`/calculator`), Profil (`/profile`). Rute detail: `/components/:id` dan `/projects/:id`.
-3. Client-side filtering & client-side pagination via hook `usePagination(items, pageSize=6, { syncUrl = true })`. Dashboard dan Katalog Komponen menyinkronkan halaman ke URL query `?page=`. Pemilih komponen pada Kalkulator menggunakan state lokal React (`syncUrl: false`) agar tidak mengotori URL kalkulator.
+2. Navigasi utama BottomNav 4 tab: Dashboard (`/`), Komponen (`/components`), Kalkulator (`/calculator`), Profil (`/profile`). Rute detail: `/components/:id` dan `/projects/:id`. BottomNav terpasang aktif di seluruh lebar layar dengan container seragam `max-width: 480px` terpusat (mobile notebook) tanpa layout desktop terpisah.
+3. Client-side filtering & client-side pagination via hook `usePagination(items, pageSize=6, { syncUrl = true, resetKey })`. Dashboard dan Katalog Komponen menyinkronkan halaman ke URL query `?page=`. Pada Kalkulator (Tahap 4B), pemilihan komponen menggunakan elemen `<select>` standar inventaris yang sederhana dan stabil.
 4. Pemisahan konsep: **Status Progres Pengerjaan** (`status`: `planned` | `in_progress` | `done`) vs **Kecukupan Stok Komponen** (*Build Readiness %*). Keduanya berdiri independen.
 5. **Keputusan Sadar**: Status `done` **TIDAK** mengurangi stok komponen secara otomatis di database. Teknisi mengoreksi fisik stok secara transparan melalui stepper di katalog/detail komponen guna mencegah pengurangan ganda.
-6. **Pencegahan Regresi List-Detail & Gerbang K6**: Pada implementasi frontend saat ini, `DashboardPage.jsx` hanya menampilkan subkumpulan proyek yang 100% siap rakit (`metrics.readyProjects`), bukan seluruh daftar proyek. Oleh karena itu, `ProjectListPage.jsx` **DILARANG DIHAPUS** pada tahap awal (Tahap 1B hingga Tahap 3). `ProjectListPage.jsx` baru boleh dihapus pada Tahap 4 HANYA SETELAH `DashboardPage.jsx` selesai ditingkatkan menjadi daftar proyek lengkap dengan filter status dan pagination client-side, guna memastikan aturan R5 (minimal 5 halaman fungsional) dan R6 (minimal 2 list-detail) tidak pernah terlanggar di sembarang commit.
+6. **Pencegahan Regresi List-Detail & Gerbang K6 (TERPENUHI di Tahap 4A)**: `DashboardPage.jsx` telah selesai ditingkatkan menjadi daftar proyek lengkap dengan filter status live dan pagination client-side. `ProjectListPage.jsx` telah dihapus secara aman; aturan R5 (minimal 5 halaman fungsional) dan R6 (minimal 2 list-detail) terpenuhi 100%.
+7. **Aturan Ringan & Anggaran Kinerja (Tahap 4A s/d Selesai)**:
+   - Anggaran bundle JS awal (gzip) maksimal 120.67 KB (tercapai 113.73 KB via `React.lazy` + `Suspense` untuk rute Kalkulator, Detail Proyek, dan Profil).
+   - Grafis bawaan / placeholder = SVG inline buatan sendiri <= 1 KB, warna `currentColor`, tanpa gradient, filter (`feGaussianBlur`, `feDropShadow`), SMIL, atau `<script>`.
+   - Gambar API wajib memakai atribut `loading="lazy"`, `decoding="async"`, `crossOrigin="anonymous"`, rasio `4:3`, dan fallback SVG saat `onError`.
+   - Urutan pengerjaan fase: **Tahap 4A** (Layout, Navigasi, Dashboard list proyek, ProjectCover, Detail status) -> **Tahap 5** (PWA Offline, Service Worker, Webmanifest) -> **Tahap 4B** (Penyempurnaan Kalkulator dengan select & kompresi canvas).
 
 ---
 
@@ -135,17 +140,18 @@ partsbin/
     │   │   ├── FilterBar.jsx         # Input search + deretan pill filter kategori/stok/status
     │   │   ├── Pagination.jsx        # Kontrol pagination (44px target, tabular-nums, aria-current)
     │   │   ├── StatusChip.jsx        # Chip status proyek (warna + ikon + teks)
-    │   │   ├── ImagePicker.jsx       # Pemilih file gambar + preview rasio 4:3
-    │   │   ├── BomBuilder.jsx        # Tabel penyusun daftar item BOM di Kalkulator
-    │   │   ├── ComponentPicker.jsx   # Pemilih komponen dengan search & pagination lokal
+    │   │   ├── ProjectCover.jsx      # Sampul gambar rasio 4:3 + fallback SVG inline (< 1 KB)
+    │   │   ├── ProjectStatusChanger.jsx # 3 tombol pengubah status pengerjaan fisik proyek
+    │   │   ├── ProjectReadinessCard.jsx # Kartu persentase kesiapan rakit BOM
+    │   │   ├── ProjectShoppingCard.jsx  # Kartu defisit daftar belanja komponen
     │   │   ├── PWABadge.jsx          # Banner offline + tombol Install PWA
     │   │   └── ThemeToggle.jsx       # Tombol pengubah mode terang/gelap
     │   ├── pages/
-    │   │   ├── DashboardPage.jsx     # Route: / (StatCard 2x2, filter status, list kartu proyek + pagination)
-    │   │   ├── ComponentListPage.jsx # Route: /components (List komponen + pagination)
+    │   │   ├── DashboardPage.jsx     # Route: / (List semua proyek, filter status pill, kartu 4:3 + pagination)
+    │   │   ├── ComponentListPage.jsx # Route: /components (List komponen + stepper stok + pagination)
     │   │   ├── ComponentDetailPage.jsx # Route: /components/:id (Detail spek + used_in_projects)
-    │   │   ├── CalculatorPage.jsx    # Route: /calculator (Alur unified buat proyek + BOM + upload gambar)
-    │   │   ├── ProjectDetailPage.jsx # Route: /projects/:id (Detail proyek, inline edit, status, BOM, shopping list)
+    │   │   ├── ProjectCreatePage.jsx # Route: /calculator (Alur unified buat proyek + BOM)
+    │   │   ├── ProjectDetailPage.jsx # Route: /projects/:id (Detail proyek, cover 4:3, 3 status button, BOM)
     │   │   └── ProfilePage.jsx       # Route: /profile (Profil mahasiswa & info aplikasi)
     │   ├── App.css                   # Styling komponen, token kartu, rasio 4:3, responsive
     │   ├── App.jsx                   # BrowserRouter, Routes 6 rute, TopBar, PWABadge, BottomNav
@@ -314,11 +320,12 @@ Seluruh respons sukses mengembalikan `{ data }` (atau `{ message, data }`) dan s
    - `missing_cost = sum(shortage_qty * unit_price)`
    - Setiap item dengan `shortage_qty > 0` dimasukkan ke array `summary.shopping_list`.
 
-### B. Metrik Dashboard (Grid 2x2 StatCard)
-1. **Total Proyek**: `projects.length`
+### B. Metrik Dashboard & Filter Status Proyek
+Dashboard v4.0 menampilkan list seluruh proyek secara langsung dengan filter status pills (Semua, Direncanakan, Dikerjakan, Selesai; dengan penghitung live `useMemo`) dan pagination client-side (`pageSize: 6`), TANPA grid StatCard 2x2 dan tanpa daftar stok menipis (fokus katalog proyek meja kerja):
+1. **Total Proyek (`Semua`)**: `projects.length`
 2. **Proyek Dikerjakan**: `projects.filter(p => p.status === 'in_progress').length`
 3. **Proyek Selesai**: `projects.filter(p => p.status === 'done').length`
-4. **Stok Menipis**: `components.filter(c => c.is_low_stock).length`
+4. **Proyek Direncanakan**: `projects.filter(p => p.status === 'planned').length`
 
 ---
 

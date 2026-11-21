@@ -126,9 +126,11 @@ html[data-theme='dark'] {
   - Radius sudut: `8px` (tombol, input, chip, thumbnail kartu), `12px` (kartu container, hero image), `16px` (modal box), `9999px` (pill filter & progress bar).
   - Garis batas solid: `1px solid var(--border)`.
   - **Aturan Target Sentuh Minimum**: Seluruh elemen interaktif (tombol, tab BottomNav, tombol pagination, stepper `-`/`+`, pill filter, tombol retry gambar) WAJIB memiliki ukuran target sentuh minimal `min-height: 44px` dan `min-width: 44px`.
-- **Layout Utama Mobile-First & Adaptasi Desktop**:
-  - Pada layar mobile (`< 768px`), lebar kolom dibatasi `max-width: 480px`, terpusat (`margin: 0 auto`), `min-height: 100dvh`, dengan `padding: 0 16px calc(84px + env(safe-area-inset-bottom))` agar tidak tertutup `BottomNav`.
-  - Pada layar desktop (`>= 768px`), layout melebar secara proporsional (`max-width: 960px`) menggunakan grid multi-kolom yang nyaman di meja kerja tanpa menghilangkan BottomNav atau mengubah semantik mobile-first.
+- **Layout Utama Mobile-First Konsisten (Semua Lebar Layar)**:
+  - Seluruh layar (mobile, tablet, maupun layar desktop meja kerja) menggunakan container seragam terpusat `max-width: 480px` (`margin: 0 auto`), `min-height: 100dvh`, dengan `padding: 0 16px calc(84px + env(safe-area-inset-bottom))`.
+  - Bottom Navigation Bar (4 tab: Dashboard, Komponen, Kalkulator, Profil) terpasang aktif di SELURUH lebar layar tanpa disembunyikan oleh breakpoint desktop, menjamin aturan R4 terbukti di laptop asisten praktikum.
+  - Komponen sampul dokumentasi (`ProjectCover`) menerapkan rasio aspek kaku `4:3`, `object-fit: cover`, dan fallback SVG siluet sirkuit monokrom `currentColor` (<= 1 KB, bebas gradient/filter).
+  - Kontrol pengubah status fisik 3 tombol (`.status-selector`, `.status-btn`) memenuhi target sentuh aksesibel `min-height: 44px` dan `min-width: 44px` dengan atribut `aria-pressed="true"`.
 - **Motion**: Transisi halus `150ms ease` hanya pada `color`, `background-color`, `border-color`, `transform`, dan `opacity`. Wajib menyertakan media query `@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }`.
 
 ---

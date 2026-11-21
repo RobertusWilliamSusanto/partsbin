@@ -116,33 +116,17 @@ Aturan Asisten Praktikum (Asprak) adalah **otoritas tertinggi**, berada di atas 
 
 ---
 
-### TAHAP 4 — Kalkulator BOM, Dashboard Proyek, Detail Proyek, & Profil (`web/`) [DELTA]
-- **Tujuan**: Mentransformasikan `ProjectCreatePage.jsx` menjadi modul terpisah `CalculatorPage.jsx` + sub-komponen modular, memperbarui Dashboard dengan StatCard 2x2 dan filter status, memperbarui Detail Proyek, serta membersihkan file usang.
-- **Tugas (Delta terhadap kode yang ada)**:
-  1. Evaluasi dan refactor logika dari `ProjectCreatePage.jsx` ke dalam sub-komponen baru (< 200 baris per file):
-     - `web/src/components/ImagePicker.jsx`: Pemilih 1 berkas gambar, preview 4:3, info kompresi Canvas, tombol hapus/ganti.
-     - `web/src/components/ComponentPicker.jsx`: Pemilih komponen dengan pencarian teks + pagination lokal (`syncUrl: false`) + tombol "Tambah ke BOM".
-     - `web/src/components/BomBuilder.jsx`: Daftar item BOM terpilih, kuantitas integer > 0, proteksi duplikat, dan tombol hapus item.
-  2. Buat `web/src/pages/CalculatorPage.jsx` (`/calculator`):
-     - Form nama dan deskripsi proyek.
-     - Integrasi `ImagePicker`, `ComponentPicker`, dan `BomBuilder`.
-     - Kalkulasi live BOM menggunakan `web/src/utils/bom.js`.
-     - Auto-save draf formulir dan item BOM ke `localStorage` (`partsbin_draft_calculator`, berkas gambar tidak ikut draf).
-     - Tombol Finalisasi Proyek: disabled saat offline (`!isOnline`).
-     - Alur submit atomic via Endpoint #10 (`POST /api/projects`) -> jika sukses & ada gambar: kompres Canvas lalu kirim via Endpoint #16 (`POST /api/projects/:id/image`) -> hapus draf -> navigasikan ke `/projects/:id`.
-  3. Perbarui `web/src/pages/DashboardPage.jsx` (`/`):
-     - StatCard 2x2: Total Proyek, Dikerjakan (`in_progress`), Selesai (`done`), dan Stok Menipis (`is_low_stock`).
-     - FilterBar status: deretan pill **Semua**, **Direncanakan**, **Dikerjakan**, **Selesai**.
-     - List kartu proyek: thumbnail rasio 4:3, nama proyek, deskripsi 2 baris (`line-clamp: 2`), `StatusChip`, progress bar kesiapan rakit, klik kartu menuju `/projects/:id`.
-     - Pasang `usePagination(filteredProjects, 6, { syncUrl: true })` dan `Pagination.jsx`.
-  4. Perbarui `web/src/pages/ProjectDetailPage.jsx` (`/projects/:id`):
-     - Hero gambar dokumentasi rasio 4:3 (disertai tombol retry unggah foto jika upload gambar sebelumnya gagal).
-     - Kontrol pengubah status pengerjaan yang memicu `PATCH /api/projects/:id/status`.
-     - Form inline edit nama & deskripsi, dialog hapus (`ConfirmModal.jsx`), kartu kesiapan rakit (*Build Readiness %*), daftar item BOM, form tambah item ke BOM, dan kartu daftar belanja (*Shopping Deficit*).
-  5. Perbarui `web/src/pages/ProfilePage.jsx` (`/profile`):
-     - Identitas pembuat (Robertus William Susanto / 21120124120007), toggle tema, status jaringan, status draf tersimpan, dan penjelasan arsitektur v4.0.
-  6. **Pembersihan Berkas & Rute**: Refactor `ProjectCreatePage.jsx` menjadi `CalculatorPage.jsx`; hapus berkas lama HANYA setelah `CalculatorPage.jsx` berfungsi dan gerbang R5/R6 lolos. Hapus `ProjectListPage.jsx` HANYA setelah `DashboardPage.jsx` memuat list proyek lengkap dan gerbang R5/R6 lolos. Daftarkan rute baru di `App.jsx` (`/`, `/components`, `/components/:id`, `/calculator`, `/projects/:id`, `/profile`) serta tambahkan redirect otomatis `<Route path="/projects" element={<Navigate to="/" replace />} />`.
-  7. Jalankan cek aturan gerbang (R3–R7), verifikasi `npm run build`, commit Tahap 4 ke Git, lalu **BERHENTI dan laporkan**.
+### TAHAP 4A — Tata Letak Seragam, Dashboard Proyek, ProjectCover, Detail Status, & Rute
+- **Status Repo**: **SELESAI** (Commit `cb5dfe8` & `7d0de84`).
+- **Cakupan Selesai**:
+  1. Tata letak seragam mobile-first terpusat `max-width: 480px` di seluruh lebar layar tanpa layout desktop terpisah.
+  2. BottomNav 4 tab (`/`, `/components`, `/calculator`, `/profile`) aktif di seluruh lebar layar (aturan R4 terbukti di laptop asisten tanpa disembunyikan media query).
+  3. Lazy loading rute berat (`React.lazy` + `Suspense`), anggaran bundle awal gzip tercapai 113.73 KB (< 120.67 KB).
+  4. `DashboardPage.jsx` menampilkan seluruh daftar proyek dengan filter status live pill dan pagination client-side (`pageSize: 6`).
+  5. `ProjectCover.jsx` rasio aspek 4:3 dengan fallback inline SVG siluet papan sirkuit IC (< 1 KB, bebas gradient/filter).
+  6. `ProjectDetailPage.jsx` memuat `ProjectCover` dan kontrol pengubah status fisik 3 tombol (`planned`, `in_progress`, `done`) dengan atribut `aria-pressed`.
+  7. Pembersihan berkas: `ProjectListPage.jsx` dihapus aman setelah bukti R5/R6 lolos; `ProjectCreatePage.jsx` dipertahankan sebagai halaman `/calculator`.
+  8. Refactor `usePagination`: logika reset berbasis ref `prevResetKey` (aman React StrictMode & refresh).
 
 ---
 
@@ -163,3 +147,8 @@ Aturan Asisten Praktikum (Asprak) adalah **otoritas tertinggi**, berada di atas 
   7. Cek `git status` dan pastikan tidak ada berkas `.env` yang ter-commit ke Git.
   8. Perbarui `README.md` di root repositori dengan tabel final **"Aturan Asprak -> Bukti di Aplikasi"**, dokumentasi 16 endpoint, dan checklist asistensi.
   9. Jalankan gerbang penuh aturan asprak, commit Tahap 5 ke Git, lalu **BERHENTI dan laporkan**.
+
+---
+
+### TAHAP 4B — Penyempurnaan Kalkulator BOM & Kompresi Canvas Image
+- **Tujuan**: Penyempurnaan antarmuka halaman `/calculator` dengan pemilih komponen berbasis `<select>` inventaris standar, kalkulasi live `bom.js`, auto-save draf `partsbin_draft_calculator`, dan kompresi gambar Canvas API sebelum finalisasi proyek.
