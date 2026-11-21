@@ -86,7 +86,7 @@ export default function DashboardPage() {
               type="button"
               role="tab"
               aria-selected={isActive}
-              className={`pill-btn ${isActive ? 'active' : ''}`}
+              className={`filter-pill ${isActive ? 'filter-pill--active' : ''}`}
               onClick={() => handleStatusChange(value)}
             >
               {label}

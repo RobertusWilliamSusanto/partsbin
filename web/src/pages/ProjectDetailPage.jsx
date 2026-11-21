@@ -25,11 +25,9 @@ export default function ProjectDetailPage() {
   const [editDesc, setEditDesc] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
-
   const [isDeleteProjOpen, setIsDeleteProjOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
-
   const [selectedCompId, setSelectedCompId] = useState('');
   const [qtyNeeded, setQtyNeeded] = useState('1');
   const [addingItem, setAddingItem] = useState(false);
@@ -192,14 +190,8 @@ export default function ProjectDetailPage() {
         </form>
       </div>
 
-      <ProjectShoppingCard
-        projectName={project.name}
-        shoppingList={summary.shopping_list || []}
-        missingCost={summary.missing_cost || 0}
-        onToast={setToastError}
-      />
-
-      {toastError && <div className="toast toast--error"><span>{toastError}</span><button type="button" className="icon-btn" onClick={() => setToastError(null)}><X size={18} /></button></div>}
+      <ProjectShoppingCard projectName={project.name} shoppingList={summary.shopping_list || []} missingCost={summary.missing_cost || 0} onToast={setToastError} />
+      {toastError && <div className="toast toast--error glass"><span>{toastError}</span><button type="button" className="icon-btn" onClick={() => setToastError(null)} aria-label="Tutup notifikasi"><X size={18} /></button></div>}
       <ConfirmModal isOpen={isDeleteProjOpen} title="Hapus Proyek?" message={`Proyek "${project.name}" beserta BOM akan dihapus.`} confirmLabel="Hapus" loading={deleting} onConfirm={handleDeleteProject} onCancel={() => setIsDeleteProjOpen(false)} />
       <ConfirmModal isOpen={Boolean(itemToDelete)} title="Hapus Item BOM?" message={itemToDelete ? `Keluarkan "${itemToDelete.component_name}"?` : ''} confirmLabel="Keluarkan" loading={deleting} onConfirm={handleDeleteItem} onCancel={() => setItemToDelete(null)} />
     </section>

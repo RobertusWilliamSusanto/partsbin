@@ -34,7 +34,7 @@ export default function PWABadge() {
     <div className="pwa-badge">
       <div className="stack-sm">
         {!isOnline && (
-          <div className="pwa-badge__box pwa-badge__box--offline" role="status">
+          <div className="pwa-badge__box pwa-badge__box--offline glass" role="status">
             <div className="pwa-badge__text">
               <WifiOff size={20} strokeWidth={1.75} aria-hidden="true" />
               <span>Mode Offline — Data dari cache (aksi tulis dinonaktifkan)</span>
@@ -43,7 +43,7 @@ export default function PWABadge() {
         )}
 
         {installPrompt && (
-          <div className="pwa-badge__box">
+          <div className="pwa-badge__box glass">
             <div className="pwa-badge__text">
               <Download size={20} strokeWidth={1.75} aria-hidden="true" />
               <span>Pasang PartsBin di perangkat Anda</span>

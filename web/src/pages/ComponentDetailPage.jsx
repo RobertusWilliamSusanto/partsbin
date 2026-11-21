@@ -137,7 +137,7 @@ export default function ComponentDetailPage() {
       </div>
 
       {toastError && (
-        <div className="toast toast--error" role="alert">
+        <div className="toast toast--error glass" role="alert">
           <span>{toastError}</span>
           <button
             type="button"

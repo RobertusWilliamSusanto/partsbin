@@ -169,7 +169,7 @@ export default function ComponentListPage() {
       )}
 
       {toastError && (
-        <div className="toast toast--error" role="alert">
+        <div className="toast toast--error glass" role="alert">
           <span>{toastError}</span>
           <button type="button" className="icon-btn" onClick={() => setToastError(null)} aria-label="Tutup notifikasi">
             <X size={20} strokeWidth={1.75} aria-hidden="true" />

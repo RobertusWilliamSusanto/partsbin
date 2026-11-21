@@ -15,7 +15,7 @@ export default function TopBar({
   const navigate = useNavigate();
 
   return (
-    <header className="top-bar">
+    <header className="top-bar glass">
       <div className="top-bar__inner">
         <div className="top-bar__left">
           {showBack && (

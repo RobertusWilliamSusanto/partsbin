@@ -21,7 +21,7 @@ export default function BottomNav() {
   }, [components]);
 
   return (
-    <nav className="bottom-nav" aria-label="Navigasi utama">
+    <nav className="bottom-nav glass" aria-label="Navigasi utama">
       <div className="bottom-nav__inner">
         {NAV_ITEMS.map(({ to, label, icon: Icon, end, hasBadge }) => (
           <NavLink
