@@ -51,7 +51,27 @@ export function useProjects() {
     };
   }, [reloadKey]);
 
-  return { projects, setProjects, loading, error, refetch };
+  const updateStatus = useCallback(
+    async (id, status) => {
+      const res = await projectService.updateStatus(id, status);
+      invalidateProjectsCache(id);
+      refetch({ silent: true });
+      return res;
+    },
+    [refetch]
+  );
+
+  const uploadImage = useCallback(
+    async (id, file) => {
+      const res = await projectService.uploadImage(id, file);
+      invalidateProjectsCache(id);
+      refetch({ silent: true });
+      return res;
+    },
+    [refetch]
+  );
+
+  return { projects, setProjects, loading, error, refetch, updateStatus, uploadImage };
 }
 
 export function useProject(id) {
@@ -102,5 +122,35 @@ export function useProject(id) {
   const activeProject = project?.id === id ? project : cached;
   const isInitialLoading = loading && !activeProject;
 
-  return { project: activeProject, setProject, loading: isInitialLoading, error, refetch };
+  const updateStatus = useCallback(
+    async (status) => {
+      if (!id) return null;
+      const res = await projectService.updateStatus(id, status);
+      invalidateProjectsCache(id);
+      refetch({ silent: true });
+      return res;
+    },
+    [id, refetch]
+  );
+
+  const uploadImage = useCallback(
+    async (file) => {
+      if (!id) return null;
+      const res = await projectService.uploadImage(id, file);
+      invalidateProjectsCache(id);
+      refetch({ silent: true });
+      return res;
+    },
+    [id, refetch]
+  );
+
+  return {
+    project: activeProject,
+    setProject,
+    loading: isInitialLoading,
+    error,
+    refetch,
+    updateStatus,
+    uploadImage,
+  };
 }

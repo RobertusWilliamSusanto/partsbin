@@ -18,6 +18,23 @@ class ProjectService {
     return apiClient.put(`/projects/${id}`, data);
   }
 
+  updateStatus(id, status) {
+    return apiClient.patch(`/projects/${id}/status`, { status });
+  }
+
+  uploadImage(id, file) {
+    const formData = new FormData();
+    formData.append('image', file);
+    // Timeout khusus 30 detik untuk unggah berkas gambar jaringan mobile
+    // Header Content-Type dikosongkan agar browser otomatis menyisipkan multipart boundary
+    return apiClient.post(`/projects/${id}/image`, formData, {
+      timeout: 30000,
+      headers: {
+        'Content-Type': undefined,
+      },
+    });
+  }
+
   remove(id) {
     return apiClient.delete(`/projects/${id}`);
   }

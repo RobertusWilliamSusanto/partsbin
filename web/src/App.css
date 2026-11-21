@@ -407,6 +407,100 @@
   color: var(--text-muted);
 }
 
+/* --- StatusChip Proyek (planned, in_progress, done) --- */
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+
+.status-chip.status-planned {
+  background-color: var(--status-planned-bg);
+  color: var(--status-planned);
+  border: 1px solid var(--border);
+}
+
+.status-chip.status-progress {
+  background-color: var(--status-progress-bg);
+  color: var(--status-progress);
+  border: 1px solid var(--accent);
+}
+
+.status-chip.status-done {
+  background-color: var(--status-done-bg);
+  color: var(--status-done);
+  border: 1px solid var(--ok);
+}
+
+/* --- Pagination Accessible Component (WCAG 44x44px target) --- */
+.pagination-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 24px 0 16px;
+  user-select: none;
+}
+
+.pagination-numbers {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pagination-btn {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background-color: var(--surface);
+  color: var(--text);
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background-color: var(--surface-2);
+  border-color: var(--border-strong);
+  color: var(--accent);
+}
+
+.pagination-btn.active {
+  background-color: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.pagination-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pagination-ellipsis {
+  min-width: 32px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
 /* --- 6. Progress Bar Readiness & Stepper Stok --- */
 .readiness-row {
   display: flex;
