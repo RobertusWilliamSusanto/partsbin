@@ -12,21 +12,17 @@ import {
 import { useComponents, updateComponentInCache } from '../hooks/useComponents';
 import { invalidateProjectsCache } from '../hooks/useProjects';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
+import { usePagination } from '../hooks/usePagination';
 import componentService from '../services/componentService';
 import { formatRupiah } from '../utils/format';
 import FilterBar from '../components/FilterBar';
 import ComponentInlineForm from '../components/ComponentInlineForm';
+import Pagination from '../components/Pagination';
 
-const CATEGORY_PILLS = [
-  { value: 'ALL', label: 'All' },
-  { value: 'MCU', label: 'MCU' },
-  { value: 'Sensor', label: 'Sensor' },
-  { value: 'Passive', label: 'Passive' },
-  { value: 'Power', label: 'Power' },
-  { value: 'Actuator', label: 'Actuator' },
-  { value: 'Connector', label: 'Connector' },
-  { value: 'Display', label: 'Display' },
-];
+const CATEGORY_PILLS = ['ALL', 'MCU', 'Sensor', 'Passive', 'Power', 'Actuator', 'Connector', 'Display'].map((v) => ({
+  value: v,
+  label: v === 'ALL' ? 'All' : v,
+}));
 
 export default function ComponentListPage() {
   const { components, setComponents, loading, error, refetch } = useComponents();
@@ -39,7 +35,7 @@ export default function ComponentListPage() {
   const [updatingId, setUpdatingId] = useState(null);
   const [toastError, setToastError] = useState(null);
 
-  // Pemfilteran di sisi browser agar instan pada dataset kecil dan 100% berfungsi saat offline
+  // Filter client-side instan di browser agar 100% fungsional saat offline
   const filteredComponents = useMemo(() => {
     const q = search.trim().toLowerCase();
     return components.filter((comp) => {
@@ -53,6 +49,13 @@ export default function ComponentListPage() {
       );
     });
   }, [components, search, category, onlyLowStock]);
+
+  // Pagination client-side terikat URL query ?page= (reset saat filter berubah)
+  const resetKey = `${search}:${category}:${onlyLowStock}`;
+  const { page, totalPages, pageItems, total, from, to, setPage } = usePagination(
+    filteredComponents,
+    { pageSize: 6, syncUrl: true, resetKey }
+  );
 
   const handleStepStock = async (comp, delta) => {
     const nextStock = comp.stock + delta;
@@ -86,17 +89,8 @@ export default function ComponentListPage() {
             onClick={() => setIsFormOpen((prev) => !prev)}
             disabled={!isOnline}
           >
-            {isFormOpen ? (
-              <>
-                <X size={20} strokeWidth={1.75} aria-hidden="true" />
-                <span>Tutup Form</span>
-              </>
-            ) : (
-              <>
-                <Plus size={20} strokeWidth={1.75} aria-hidden="true" />
-                <span>Tambah</span>
-              </>
-            )}
+            {isFormOpen ? <X size={20} strokeWidth={1.75} aria-hidden="true" /> : <Plus size={20} strokeWidth={1.75} aria-hidden="true" />}
+            <span>{isFormOpen ? 'Tutup Form' : 'Tambah'}</span>
           </button>
         </div>
       </div>
@@ -151,78 +145,56 @@ export default function ComponentListPage() {
         <>
           <div className="list-head">
             <h2>Daftar Inventaris</h2>
-            <span className="count">
-              {filteredComponents.length} / {components.length} item
-            </span>
+            <span className="count">{total > 0 ? `Menampilkan ${from}–${to} dari ${total}` : '0 item'}</span>
           </div>
 
-          {filteredComponents.length === 0 ? (
+          {total === 0 ? (
             <div className="card empty-state">
               <PackageOpen size={20} strokeWidth={1.75} aria-hidden="true" />
               <p>Tidak ada komponen yang cocok dengan filter saat ini.</p>
             </div>
           ) : (
-            <ul className="stock stock--components">
-              {filteredComponents.map((comp) => {
-                const isBusy = updatingId === comp.id;
-                return (
-                  <li key={comp.id} className="card card--interactive card--flex">
-                    <Link to={`/components/${comp.id}`} className="card-link-area">
-                      <div className="card-head">
-                        <span className="card-title">{comp.name}</span>
-                        {comp.is_low_stock ? (
-                          <span className="chip chip--warn">
-                            <AlertTriangle size={20} strokeWidth={1.75} aria-hidden="true" />
-                            <span>Stok Menipis</span>
+            <>
+              <ul className="stock stock--components">
+                {pageItems.map((comp) => {
+                  const isBusy = updatingId === comp.id;
+                  return (
+                    <li key={comp.id} className="card card--interactive card--flex">
+                      <Link to={`/components/${comp.id}`} className="card-link-area">
+                        <div className="card-head">
+                          <span className="card-title">{comp.name}</span>
+                          <span className={`chip chip--${comp.is_low_stock ? 'warn' : 'ok'}`}>
+                            {comp.is_low_stock ? <AlertTriangle size={20} strokeWidth={1.75} aria-hidden="true" /> : <CheckCircle2 size={20} strokeWidth={1.75} aria-hidden="true" />}
+                            <span>{comp.is_low_stock ? 'Stok Menipis' : 'Cukup'}</span>
                           </span>
-                        ) : (
-                          <span className="chip chip--ok">
-                            <CheckCircle2 size={20} strokeWidth={1.75} aria-hidden="true" />
-                            <span>Cukup</span>
-                          </span>
-                        )}
+                        </div>
+                        <div className="row-wrap">
+                          <span className="chip chip--neutral">{comp.category}</span>
+                          <span className="mono-badge">{comp.bin_location}</span>
+                        </div>
+                      </Link>
+                      <hr className="card-divider" />
+                      <div className="row-between">
+                        <div>
+                          <div className="price">{formatRupiah(comp.unit_price)}</div>
+                          <div className="count">Min. stok: {comp.min_stock} pcs</div>
+                        </div>
+                        <div className="stepper" aria-label={`Atur stok ${comp.name}`}>
+                          <button type="button" className="stepper-btn" onClick={() => handleStepStock(comp, -1)} disabled={comp.stock === 0 || !isOnline || isBusy} aria-label={`Kurangi stok ${comp.name}`}>
+                            <Minus size={20} strokeWidth={1.75} aria-hidden="true" />
+                          </button>
+                          <span className="stepper-val">{comp.stock}</span>
+                          <button type="button" className="stepper-btn" onClick={() => handleStepStock(comp, 1)} disabled={!isOnline || isBusy} aria-label={`Tambah stok ${comp.name}`}>
+                            <Plus size={20} strokeWidth={1.75} aria-hidden="true" />
+                          </button>
+                        </div>
                       </div>
-
-                      <div className="row-wrap">
-                        <span className="chip chip--neutral">{comp.category}</span>
-                        <span className="mono-badge">{comp.bin_location}</span>
-                      </div>
-                    </Link>
-
-                    <hr className="card-divider" />
-
-                    <div className="row-between">
-                      <div>
-                        <div className="price">{formatRupiah(comp.unit_price)}</div>
-                        <div className="count">Min. stok: {comp.min_stock} pcs</div>
-                      </div>
-
-                      <div className="stepper" aria-label={`Atur stok ${comp.name}`}>
-                        <button
-                          type="button"
-                          className="stepper-btn"
-                          onClick={() => handleStepStock(comp, -1)}
-                          disabled={comp.stock === 0 || !isOnline || isBusy}
-                          aria-label={`Kurangi stok ${comp.name}`}
-                        >
-                          <Minus size={20} strokeWidth={1.75} aria-hidden="true" />
-                        </button>
-                        <span className="stepper-val">{comp.stock}</span>
-                        <button
-                          type="button"
-                          className="stepper-btn"
-                          onClick={() => handleStepStock(comp, 1)}
-                          disabled={!isOnline || isBusy}
-                          aria-label={`Tambah stok ${comp.name}`}
-                        >
-                          <Plus size={20} strokeWidth={1.75} aria-hidden="true" />
-                        </button>
-                      </div>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
+                    </li>
+                  );
+                })}
+              </ul>
+              <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+            </>
           )}
         </>
       )}
@@ -230,12 +202,7 @@ export default function ComponentListPage() {
       {toastError && (
         <div className="toast toast--error" role="alert">
           <span>{toastError}</span>
-          <button
-            type="button"
-            className="icon-btn"
-            onClick={() => setToastError(null)}
-            aria-label="Tutup notifikasi"
-          >
+          <button type="button" className="icon-btn" onClick={() => setToastError(null)} aria-label="Tutup notifikasi">
             <X size={20} strokeWidth={1.75} aria-hidden="true" />
           </button>
         </div>
