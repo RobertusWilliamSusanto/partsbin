@@ -108,3 +108,67 @@ export async function compressImage(file) {
     }
   }
 }
+
+// Render canvas dan kompresi kualitas bertingkat untuk rendisi tertentu
+async function renderRendition(bitmap, maxSide, targetBytes, qualitySteps, filePrefix) {
+  let { width, height } = bitmap;
+  if (width > maxSide || height > maxSide) {
+    if (width >= height) {
+      height = Math.round((height * maxSide) / width);
+      width = maxSide;
+    } else {
+      width = Math.round((width * maxSide) / height);
+      height = maxSide;
+    }
+  }
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Canvas 2D context tidak didukung.');
+  ctx.drawImage(bitmap, 0, 0, width, height);
+
+  let targetMime = 'image/webp';
+  let testBlob = await canvasToBlob(canvas, 'image/webp', qualitySteps[0]);
+  if (!testBlob || testBlob.type !== 'image/webp') {
+    targetMime = 'image/jpeg';
+    testBlob = await canvasToBlob(canvas, 'image/jpeg', qualitySteps[0]);
+  }
+  let finalBlob = testBlob;
+  for (const q of qualitySteps) {
+    const b = await canvasToBlob(canvas, targetMime, q);
+    if (b) {
+      finalBlob = b;
+      if (b.size <= targetBytes) break;
+    }
+  }
+  const ext = targetMime === 'image/webp' ? 'webp' : 'jpg';
+  const file = new File([finalBlob], `${filePrefix}_${Date.now()}.${ext}`, {
+    type: targetMime,
+    lastModified: Date.now(),
+  });
+  return { file, blob: finalBlob, compressedSize: finalBlob.size, width, height, mimeType: targetMime };
+}
+
+// Kompresi rendisi ganda (full 1024px & thumbnail 720px) dengan sekali decode bitmap
+export async function compressWithThumb(file) {
+  if (!file || !file.type.startsWith('image/')) {
+    return {
+      full: { file, blob: file, originalSize: file?.size || 0, compressedSize: file?.size || 0, mimeType: file?.type || '' },
+      thumb: null,
+    };
+  }
+  const originalSize = file.size;
+  let bitmap = null;
+  try {
+    bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+    const full = await renderRendition(bitmap, 1024, 200 * 1024, [0.8, 0.7, 0.6], 'doc_full');
+    const thumb = await renderRendition(bitmap, 720, 80 * 1024, [0.75, 0.65, 0.55], 'doc_thumb');
+    return {
+      full: { ...full, originalSize },
+      thumb: { ...thumb, originalSize },
+    };
+  } finally {
+    if (bitmap && typeof bitmap.close === 'function') bitmap.close();
+  }
+}

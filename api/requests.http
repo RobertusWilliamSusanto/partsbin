@@ -125,6 +125,35 @@ Content-Type: application/json
 ### 14. DELETE /api/projects/:id/items/:itemId (200 — hapus item BOM)
 DELETE {{baseUrl}}/projects/{{newProjId}}/items/{{newItemId}}
 
+### 17. POST /api/projects/:id/photos (201 — unggah foto dokumentasi proyek)
+# @name addProjectPhoto
+POST {{baseUrl}}/projects/{{newProjId}}/photos
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryPartsBin
+
+------WebKitFormBoundaryPartsBin
+Content-Disposition: form-data; name="caption"
+
+Foto perakitan breadboard tahap 1
+------WebKitFormBoundaryPartsBin
+Content-Disposition: form-data; name="image"; filename="doc1.jpg"
+Content-Type: image/jpeg
+
+< ./sample.jpg
+------WebKitFormBoundaryPartsBin--
+
+@newPhotoId = {{addProjectPhoto.response.body.data.id}}
+
+### 18. PATCH /api/projects/:id/photos/:photoId (200 — perbarui caption foto)
+PATCH {{baseUrl}}/projects/{{newProjId}}/photos/{{newPhotoId}}
+Content-Type: application/json
+
+{
+  "caption": "Foto perakitan modul daya selesai"
+}
+
+### 19. DELETE /api/projects/:id/photos/:photoId (200 — hapus foto dokumentasi)
+DELETE {{baseUrl}}/projects/{{newProjId}}/photos/{{newPhotoId}}
+
 ### 12. DELETE /api/projects/:id (200 — hapus proyek baru dan berkas storage)
 DELETE {{baseUrl}}/projects/{{newProjId}}
 
@@ -243,3 +272,57 @@ Content-Type: application/json
     { "component_id": "{{missingUuid}}", "quantity_needed": 1 }
   ]
 }
+
+### N16. POST /api/projects/:id/photos tanpa melampirkan berkas (400 — req.file kosong)
+POST {{baseUrl}}/projects/{{seedProjId}}/photos
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryPartsBin
+
+------WebKitFormBoundaryPartsBin--
+
+### N17. POST /api/projects/:id/photos dengan caption melebihi 200 karakter (400)
+POST {{baseUrl}}/projects/{{seedProjId}}/photos
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryPartsBin
+
+------WebKitFormBoundaryPartsBin
+Content-Disposition: form-data; name="caption"
+
+Teks keterangan foto dokumentasi ini sengaja dibuat sangat panjang sekali melebihi batas dua ratus karakter yang telah ditentukan dalam spesifikasi sistem guna memverifikasi apakah server akan menolak dengan status 400 Bad Request secara konsisten.
+------WebKitFormBoundaryPartsBin
+Content-Disposition: form-data; name="image"; filename="doc.jpg"
+Content-Type: image/jpeg
+
+fake-jpeg-data
+------WebKitFormBoundaryPartsBin--
+
+### N18. POST /api/projects/:id/photos untuk ID proyek tidak ada (404)
+POST {{baseUrl}}/projects/{{missingUuid}}/photos
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryPartsBin
+
+------WebKitFormBoundaryPartsBin
+Content-Disposition: form-data; name="image"; filename="doc.jpg"
+Content-Type: image/jpeg
+
+fake-jpeg-data
+------WebKitFormBoundaryPartsBin--
+
+### N19. PATCH /api/projects/:id/photos/:photoId dengan photoId bukan format UUID (400)
+PATCH {{baseUrl}}/projects/{{seedProjId}}/photos/bukan-format-uuid
+Content-Type: application/json
+
+{
+  "caption": "Validasi UUID photoId"
+}
+
+### N20. PATCH /api/projects/:id/photos/:photoId untuk foto milik proyek lain / tidak ada (404)
+PATCH {{baseUrl}}/projects/{{seedProjId}}/photos/{{missingUuid}}
+Content-Type: application/json
+
+{
+  "caption": "Uji foto tidak ada"
+}
+
+### N21. DELETE /api/projects/:id/photos/:photoId dengan photoId bukan format UUID (400)
+DELETE {{baseUrl}}/projects/{{seedProjId}}/photos/bukan-uuid
+
+### N22. DELETE /api/projects/:id/photos/:photoId foto milik proyek lain / tidak ada (404)
+DELETE {{baseUrl}}/projects/{{seedProjId}}/photos/{{missingUuid}}

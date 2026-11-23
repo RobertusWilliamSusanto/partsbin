@@ -16,6 +16,11 @@ export function errorHandler(err, req, res, _next) {
         error: 'Ukuran berkas gambar melebihi batas 2 MB.',
       });
     }
+    if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+      return res.status(400).json({
+        error: 'Field berkas tidak dikenali. Gunakan field image.',
+      });
+    }
     return res.status(400).json({
       error: err.message || 'Gagal memproses unggahan berkas multipart.',
     });

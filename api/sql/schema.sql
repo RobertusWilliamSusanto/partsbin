@@ -4,7 +4,7 @@
 -- =============================================================================
 
 -- Hapus komentar di bawah HANYA jika ingin mereset seluruh tabel dari nol:
--- DROP TABLE IF EXISTS project_items, projects, components CASCADE;
+-- DROP TABLE IF EXISTS project_photos, project_items, projects, components CASCADE;
 
 -- 1. Tabel utama katalog komponen elektronika
 CREATE TABLE IF NOT EXISTS components (
@@ -41,12 +41,25 @@ CREATE TABLE IF NOT EXISTS project_items (
   CONSTRAINT unique_project_component UNIQUE (project_id, component_id)
 );
 
+-- 4. Tabel dokumentasi foto proyek (banyak foto per proyek)
+-- Kenapa ON DELETE CASCADE? Foto proyek ikut terhapus otomatis saat proyek dihapus.
+CREATE TABLE IF NOT EXISTS project_photos (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  image_path TEXT NOT NULL,
+  thumb_path TEXT,
+  caption VARCHAR(200) NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- Index untuk mempercepat filter kategori dan join relasi BOM
 CREATE INDEX IF NOT EXISTS idx_components_category ON components(category);
 CREATE INDEX IF NOT EXISTS idx_project_items_project_id ON project_items(project_id);
 CREATE INDEX IF NOT EXISTS idx_project_items_component_id ON project_items(component_id);
+CREATE INDEX IF NOT EXISTS idx_project_photos_project_created ON project_photos(project_id, created_at);
 
 -- Nonaktifkan RLS sesuai standar Modul 1 (menggunakan Supabase anon key tanpa autentikasi pengguna)
 ALTER TABLE components DISABLE ROW LEVEL SECURITY;
 ALTER TABLE projects DISABLE ROW LEVEL SECURITY;
 ALTER TABLE project_items DISABLE ROW LEVEL SECURITY;
+ALTER TABLE project_photos DISABLE ROW LEVEL SECURITY;
