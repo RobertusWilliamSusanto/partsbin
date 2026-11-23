@@ -20,6 +20,7 @@ export default function ProjectGallery({ projectId, photos = [], photoLimit = 12
   const [prevProjectId, setPrevProjectId] = useState(projectId);
   const [viewerIndex, setViewerIndex] = useState(null);
   const dialogRef = useRef(null);
+  const uploadingRef = useRef(false);
 
   // Buka atau tutup dialog native saat index foto aktif berubah
   useEffect(() => {
@@ -46,7 +47,8 @@ export default function ProjectGallery({ projectId, photos = [], photoLimit = 12
 
   // Proses antrean unggah massal secara sekuensial
   const processUploadQueue = async (queue, prefixMsg = '') => {
-    if (!queue || queue.length === 0) return;
+    if (!queue || queue.length === 0 || uploadingRef.current) return;
+    uploadingRef.current = true;
     setUploading(true);
     let successCount = 0;
     const failed = [];
@@ -66,6 +68,7 @@ export default function ProjectGallery({ projectId, photos = [], photoLimit = 12
           // Jaringan terputus: hentikan antrean dan simpan sisa berkas untuk coba lagi
           const remainingToRetry = [file, ...queue.slice(i + 1)];
           setFailedFiles(remainingToRetry);
+          uploadingRef.current = false;
           setUploading(false);
           setUploadProgress('');
           setStatusMessage(
@@ -78,6 +81,7 @@ export default function ProjectGallery({ projectId, photos = [], photoLimit = 12
       }
     }
 
+    uploadingRef.current = false;
     setUploading(false);
     setUploadProgress('');
     setFailedFiles(failed.map((f) => f.file));
@@ -95,7 +99,7 @@ export default function ProjectGallery({ projectId, photos = [], photoLimit = 12
   const handleFileChange = async (e) => {
     const files = Array.from(e.target.files || []);
     e.target.value = '';
-    if (files.length === 0) return;
+    if (files.length === 0 || uploadingRef.current) return;
 
     const currentCount = photos.length;
     const remainingQuota = Math.max(0, photoLimit - currentCount);
@@ -116,7 +120,7 @@ export default function ProjectGallery({ projectId, photos = [], photoLimit = 12
   };
 
   const handleRetryFailed = async () => {
-    if (failedFiles.length === 0 || isActionDisabled) return;
+    if (failedFiles.length === 0 || isActionDisabled || uploadingRef.current) return;
     const retryList = [...failedFiles];
     setFailedFiles([]);
     await processUploadQueue(retryList);
