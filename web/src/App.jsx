@@ -53,9 +53,9 @@ function AppShell() {
 
   // Inisialisasi pendengar event sinkronisasi offline di latar belakang via dynamic import
   useEffect(() => {
-    import('./offline/syncEngine').then(({ initSyncEngineListeners }) => {
-      initSyncEngineListeners();
-    });
+    import('./offline/syncEngine')
+      .then((m) => m?.initSyncEngineListeners?.())
+      .catch(() => {});
   }, []);
 
   return (
