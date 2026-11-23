@@ -1,15 +1,20 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { Link, useParams, useNavigate, useLocation } from 'react-router-dom';
-import { Pencil, Trash2, Plus, AlertTriangle, X } from 'lucide-react';
+import { Pencil, Trash2, Plus, AlertTriangle, X, FileDown } from 'lucide-react';
 import { useProject, invalidateProjectsCache } from '../hooks/useProjects';
 import { useComponents, invalidateComponentsCache } from '../hooks/useComponents';
+import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import projectService from '../services/projectService';
 import ConfirmModal from '../components/modals/ConfirmModal';
 import ProjectCover from '../components/ProjectCover';
+import ProjectGallery from '../components/ProjectGallery';
 import ProjectStatusChanger from '../components/ProjectStatusChanger';
 import ProjectReadinessCard from '../components/ProjectReadinessCard';
 import ProjectShoppingCard from '../components/ProjectShoppingCard';
 import ProjectBomList from '../components/ProjectBomList';
+
+// Dokumen cetak dimuat secara lazy agar kode & CSS cetak tidak membebani initial bundle
+const ProjectDocumentPrint = lazy(() => import('../components/ProjectDocumentPrint'));
 
 export default function ProjectDetailPage() {
   const { id } = useParams();
@@ -30,6 +35,35 @@ export default function ProjectDetailPage() {
   const [qtyNeeded, setQtyNeeded] = useState('1');
   const [addingItem, setAddingItem] = useState(false);
   const [toastError, setToastError] = useState(() => location.state?.warning || null);
+  const isOnline = useOnlineStatus();
+  const [printing, setPrinting] = useState(false);
+  const [printPreparing, setPrintPreparing] = useState(false);
+
+  // Alur cetak PDF: render komponen cetak -> tunggu gambar siap -> window.print() -> pulihkan judul
+  const handleDownloadPdf = () => {
+    if (printing || !project) return;
+    setPrintPreparing(true);
+    setPrinting(true);
+  };
+
+  const handlePrintReady = () => {
+    setPrintPreparing(false);
+    const originalTitle = document.title;
+    const dateStr = new Date().toISOString().split('T')[0];
+    const safeName = (project?.name || 'Proyek').replace(/[/\\?%*:|"<>]/g, '-');
+    document.title = `PartsBin - ${safeName} - ${dateStr}`;
+
+    const handleAfterPrint = () => {
+      document.title = originalTitle;
+      setPrinting(false);
+      window.removeEventListener('afterprint', handleAfterPrint);
+    };
+    window.addEventListener('afterprint', handleAfterPrint);
+
+    setTimeout(() => {
+      window.print();
+    }, 100);
+  };
 
   // Alihkan URL sementara ke URL riil saat proyek offline selesai disinkronkan ke server
   useEffect(() => {
@@ -167,10 +201,40 @@ export default function ProjectDetailPage() {
               <button type="button" className="btn btn--outline" style={{ flex: 1 }} onClick={() => { setEditName(project.name); setEditDesc(project.description || ''); setIsEditing(true); }}><Pencil size={18} /><span>Edit Info</span></button>
               <button type="button" className="btn btn--danger" style={{ flex: 1 }} onClick={() => setIsDeleteProjOpen(true)}><Trash2 size={18} /><span>Hapus</span></button>
             </div>
+            <div className="stack-sm no-print" style={{ marginTop: '4px' }}>
+              <button
+                type="button"
+                className="btn btn--primary"
+                onClick={handleDownloadPdf}
+                disabled={printing}
+                style={{ width: '100%' }}
+              >
+                <FileDown size={18} />
+                <span>{printPreparing ? 'Menyiapkan Dokumen...' : 'Unduh PDF'}</span>
+              </button>
+              <p className="muted" style={{ fontSize: '0.75rem', textAlign: 'center', margin: 0 }}>
+                Di dialog cetak pilih &quot;Simpan sebagai PDF&quot; dan matikan &quot;Header dan footer&quot;.
+              </p>
+              {!isOnline && (
+                <p className="muted" style={{ fontSize: '0.75rem', textAlign: 'center', margin: 0, color: 'var(--warn)' }}>
+                  Mode offline: Gambar yang belum tersimpan di cache akan diganti placeholder pada dokumen cetak.
+                </p>
+              )}
+            </div>
           </>
         )}
         <ProjectStatusChanger currentStatus={project.status} onStatusChange={handleStatusChange} disabled={updatingStatus} />
       </div>
+
+      <ProjectGallery
+        projectId={project.id}
+        photos={project.photos || []}
+        onPhotoMutated={() => {
+          invalidateProjectsCache(project.id);
+          refetch({ silent: true });
+        }}
+        isOffline={!isOnline}
+      />
 
       <ProjectReadinessCard summary={summary} />
       <ProjectBomList items={items} onRequestDelete={(it) => setItemToDelete(it)} />
@@ -191,6 +255,11 @@ export default function ProjectDetailPage() {
       {toastError && <div className="toast toast--error glass"><span>{toastError}</span><button type="button" className="icon-btn" onClick={() => setToastError(null)} aria-label="Tutup notifikasi"><X size={18} /></button></div>}
       <ConfirmModal isOpen={isDeleteProjOpen} title="Hapus Proyek?" message={`Proyek "${project.name}" beserta BOM akan dihapus.`} confirmLabel="Hapus" loading={deleting} onConfirm={handleDeleteProject} onCancel={() => setIsDeleteProjOpen(false)} />
       <ConfirmModal isOpen={Boolean(itemToDelete)} title="Hapus Item BOM?" message={itemToDelete ? `Keluarkan "${itemToDelete.component_name}"?` : ''} confirmLabel="Keluarkan" loading={deleting} onConfirm={handleDeleteItem} onCancel={() => setItemToDelete(null)} />
+      {printing && (
+        <Suspense fallback={null}>
+          <ProjectDocumentPrint project={project} onReady={handlePrintReady} />
+        </Suspense>
+      )}
     </section>
   );
 }
