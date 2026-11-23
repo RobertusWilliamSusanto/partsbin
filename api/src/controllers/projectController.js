@@ -388,21 +388,40 @@ export const projectController = {
     }
   },
 
-  // Endpoint #17: Unggah foto dokumentasi proyek baru (multipart/form-data)
+  // Endpoint #17: Unggah foto dokumentasi proyek baru (multipart/form-data: image wajib, thumb opsional)
   async addPhoto(req, res, next) {
-    if (!req.file) {
+    const imageFile = req.files?.image?.[0] || req.file;
+    const thumbFile = req.files?.thumb?.[0];
+
+    if (!imageFile) {
       return res.status(400).json({ error: 'Berkas gambar wajib diunggah pada field image.' });
     }
 
-    if (req.file.size === 0 || req.file.buffer.length === 0) {
+    if (imageFile.size === 0 || imageFile.buffer.length === 0) {
       return res.status(400).json({ error: 'Berkas gambar tidak boleh kosong (0 byte).' });
     }
 
-    const detected = detectImageFormatFromBuffer(req.file.buffer);
+    const detected = detectImageFormatFromBuffer(imageFile.buffer);
     if (!detected) {
       return res.status(400).json({
         error: 'Konten berkas bukan gambar JPEG, PNG, atau WebP yang valid (magic bytes tidak cocok).',
       });
+    }
+
+    let detectedThumb = null;
+    if (thumbFile) {
+      if (thumbFile.size === 0 || thumbFile.buffer.length === 0) {
+        return res.status(400).json({ error: 'Berkas thumbnail tidak boleh kosong (0 byte).' });
+      }
+      if (thumbFile.size > 150 * 1024) {
+        return res.status(400).json({ error: 'Ukuran berkas thumbnail melebihi batas 150 KB.' });
+      }
+      detectedThumb = detectImageFormatFromBuffer(thumbFile.buffer);
+      if (!detectedThumb) {
+        return res.status(400).json({
+          error: 'Konten berkas thumbnail bukan gambar JPEG, PNG, atau WebP yang valid (magic bytes tidak cocok).',
+        });
+      }
     }
 
     const body = req.body ?? {};
@@ -435,30 +454,53 @@ export const projectController = {
       }
 
       // 2. Unggah berkas ke Supabase Storage bucket 'project-images'
-      const newFileName = `projects/${project.id}/docs/${crypto.randomUUID()}.${detected.ext}`;
-      const { error: uploadError } = await supabase.storage
-        .from('project-images')
-        .upload(newFileName, req.file.buffer, {
-          contentType: detected.mime,
-          upsert: false,
-        });
+      const photoUuid = crypto.randomUUID();
+      const newFileName = `projects/${project.id}/docs/${photoUuid}.${detected.ext}`;
+      const newThumbName = thumbFile && detectedThumb
+        ? `projects/${project.id}/docs/${photoUuid}_t.${detectedThumb.ext}`
+        : null;
 
-      if (uploadError) throw uploadError;
-
-      // 3. Simpan record metadata ke database dengan compensating rollback jika insert gagal
+      const uploadedPaths = [];
       let createdPhoto;
+
       try {
+        const { error: uploadError } = await supabase.storage
+          .from('project-images')
+          .upload(newFileName, imageFile.buffer, {
+            contentType: detected.mime,
+            upsert: false,
+          });
+
+        if (uploadError) throw uploadError;
+        uploadedPaths.push(newFileName);
+
+        if (newThumbName && thumbFile) {
+          const { error: thumbUploadError } = await supabase.storage
+            .from('project-images')
+            .upload(newThumbName, thumbFile.buffer, {
+              contentType: detectedThumb.mime,
+              upsert: false,
+            });
+
+          if (thumbUploadError) throw thumbUploadError;
+          uploadedPaths.push(newThumbName);
+        }
+
+        // 3. Simpan record metadata ke database
         createdPhoto = await projectPhotoModel.create({
           project_id: project.id,
           image_path: newFileName,
+          thumb_path: newThumbName,
           caption,
         });
-      } catch (dbError) {
-        await supabase.storage
-          .from('project-images')
-          .remove([newFileName])
-          .catch((cleanErr) => console.warn('[STORAGE_ROLLBACK_WARN] Gagal rollback foto docs:', cleanErr));
-        throw dbError;
+      } catch (uploadOrDbErr) {
+        if (uploadedPaths.length > 0) {
+          await supabase.storage
+            .from('project-images')
+            .remove(uploadedPaths)
+            .catch((cleanErr) => console.warn('[STORAGE_ROLLBACK_WARN] Gagal rollback berkas docs:', cleanErr));
+        }
+        throw uploadOrDbErr;
       }
 
       return res.status(201).json({

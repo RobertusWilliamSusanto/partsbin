@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { projectController } from '../controllers/projectController.js';
-import { uploadProjectImage } from '../middlewares/upload.js';
+import { uploadProjectImage, uploadProjectPhotoWithThumb } from '../middlewares/upload.js';
 import { validateUuidParam } from '../middlewares/validateUuid.js';
 
 const router = Router();
@@ -36,8 +36,8 @@ router.post(
 router.post('/:id/items', projectController.addItem);
 router.delete('/:id/items/:itemId', projectController.removeItem);
 
-// Endpoint #17: Unggah foto dokumentasi proyek ke galeri (multipart/form-data)
-router.post('/:id/photos', uploadProjectImage, projectController.addPhoto);
+// Endpoint #17: Unggah foto dokumentasi proyek ke galeri (multipart/form-data: image wajib, thumb opsional)
+router.post('/:id/photos', uploadProjectPhotoWithThumb, projectController.addPhoto);
 
 // Endpoint #18: Perbarui teks caption foto dokumentasi
 router.patch('/:id/photos/:photoId', projectController.updatePhotoCaption);

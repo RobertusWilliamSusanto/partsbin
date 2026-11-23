@@ -63,3 +63,13 @@ export const uploadProjectImage = multer({
   limits: { fileSize: 2 * 1024 * 1024 }, // 2 MB
   fileFilter,
 }).single('image');
+
+// Instance middleware multer untuk endpoint foto dokumentasi (image wajib, thumb opsional)
+export const uploadProjectPhotoWithThumb = multer({
+  storage,
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2 MB per file
+  fileFilter,
+}).fields([
+  { name: 'image', maxCount: 1 },
+  { name: 'thumb', maxCount: 1 },
+]);
