@@ -2,6 +2,11 @@
 const DB_NAME = 'partsbin_db';
 const DB_VERSION = 1;
 
+// Meminta persistensi penyimpanan browser untuk mencegah penggusuran otomatis oleh OS (mis. Safari/iOS ~7 hari)
+if (typeof navigator !== 'undefined' && navigator.storage?.persist) {
+  navigator.storage.persist().catch(() => {});
+}
+
 let dbInstance = null;
 let dbOpenPromise = null;
 

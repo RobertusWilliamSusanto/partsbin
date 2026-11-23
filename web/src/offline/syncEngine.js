@@ -110,6 +110,11 @@ export async function flushOutbox() {
           continue;
         }
 
+        // Tahan operasi kedaluwarsa (> 30 hari) hingga dikonfirmasi oleh pengguna
+        if (op.isExpired && !op.userConfirmed) {
+          continue;
+        }
+
         op.attempts = (op.attempts || 0) + 1;
         await putItem('outbox', op);
 

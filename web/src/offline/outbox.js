@@ -179,6 +179,23 @@ export async function removeOp(opId) {
   await deleteItem('outbox', opId);
 }
 
+// Membuang operasi gagal dan memulihkan keadaan data lokal dari server bila online
+export async function discardOp(opId) {
+  const allOps = await getAll('outbox');
+  const targetOp = allOps.find((o) => o.id === opId);
+  await deleteItem('outbox', opId);
+
+  if (targetOp && typeof navigator !== 'undefined' && navigator.onLine) {
+    if (targetOp.entityType === 'component') {
+      const { default: compService } = await import('../services/componentService');
+      await compService.getAll().catch(() => {});
+    } else if (targetOp.entityType === 'project') {
+      const { default: projService } = await import('../services/projectService');
+      await projService.getAll().catch(() => {});
+    }
+  }
+}
+
 // Mengembalikan operasi gagal ke status 'pending' agar dicoba kembali
 export async function retryOp(opId) {
   const allOps = await getAll('outbox');
@@ -187,6 +204,15 @@ export async function retryOp(opId) {
   op.status = 'pending';
   op.retryCount = 0;
   op.lastError = null;
+  await putItem('outbox', op);
+}
+
+// Mengonfirmasi pengiriman operasi yang telah berumur lebih dari 30 hari
+export async function confirmExpiredOp(opId) {
+  const allOps = await getAll('outbox');
+  const op = allOps.find((o) => o.id === opId);
+  if (!op) return;
+  op.userConfirmed = true;
   await putItem('outbox', op);
 }
 

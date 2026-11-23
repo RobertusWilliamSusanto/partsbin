@@ -19,6 +19,7 @@ export default function PWABadge() {
   const [isStandalone, setIsStandalone] = useState(getIsStandalone);
   const [pendingCount, setPendingCount] = useState(0);
   const [failedOps, setFailedOps] = useState([]);
+  const [expiredOps, setExpiredOps] = useState([]);
   const [isSyncing, setIsSyncing] = useState(false);
   const [installPrompt, setInstallPrompt] = useState(() => {
     if (getIsStandalone()) return null;
@@ -30,10 +31,17 @@ export default function PWABadge() {
     try {
       const { getAll } = await import('../offline/db');
       const allOps = await getAll('outbox');
-      const pending = allOps.filter((op) => op.status === 'pending');
+      const now = Date.now();
+      const expired = allOps.filter(
+        (op) => op.status === 'pending' && now - new Date(op.createdAt).getTime() > 30 * 24 * 60 * 60 * 1000 && !op.userConfirmed
+      );
+      const pending = allOps.filter(
+        (op) => op.status === 'pending' && (now - new Date(op.createdAt).getTime() <= 30 * 24 * 60 * 60 * 1000 || op.userConfirmed)
+      );
       const failed = allOps.filter((op) => op.status === 'failed');
       setPendingCount(pending.length);
       setFailedOps(failed);
+      setExpiredOps(expired);
     } catch {
       // Abaikan bila IndexedDB belum tersedia
     }
@@ -45,10 +53,17 @@ export default function PWABadge() {
       .then(({ getAll }) => getAll('outbox'))
       .then((allOps) => {
         if (!active) return;
-        const pending = allOps.filter((op) => op.status === 'pending');
+        const now = Date.now();
+        const expired = allOps.filter(
+          (op) => op.status === 'pending' && now - new Date(op.createdAt).getTime() > 30 * 24 * 60 * 60 * 1000 && !op.userConfirmed
+        );
+        const pending = allOps.filter(
+          (op) => op.status === 'pending' && (now - new Date(op.createdAt).getTime() <= 30 * 24 * 60 * 60 * 1000 || op.userConfirmed)
+        );
         const failed = allOps.filter((op) => op.status === 'failed');
         setPendingCount(pending.length);
         setFailedOps(failed);
+        setExpiredOps(expired);
       })
       .catch(() => {});
 
@@ -123,15 +138,23 @@ export default function PWABadge() {
   };
 
   const handleDiscard = async (opId) => {
-    const { removeOp } = await import('../offline/outbox');
+    const { discardOp } = await import('../offline/outbox');
     const { broadcastSyncEvent } = await import('../offline/syncEngine');
-    await removeOp(opId);
+    await discardOp(opId);
     await refreshOutboxStatus();
     broadcastSyncEvent('data_discarded');
   };
 
+  const handleConfirmExpired = async (opId) => {
+    const { confirmExpiredOp } = await import('../offline/outbox');
+    const { flushOutbox } = await import('../offline/syncEngine');
+    await confirmExpiredOp(opId);
+    await refreshOutboxStatus();
+    flushOutbox();
+  };
+
   const showInstall = Boolean(installPrompt) && !isStandalone;
-  const hasOps = pendingCount > 0 || failedOps.length > 0;
+  const hasOps = pendingCount > 0 || failedOps.length > 0 || expiredOps.length > 0;
   const showBadge = !isOnline || hasOps || showInstall;
 
   if (!showBadge) return null;
@@ -153,11 +176,13 @@ export default function PWABadge() {
             <OfflinePanel
               pendingCount={pendingCount}
               failedOps={failedOps}
+              expiredOps={expiredOps}
               isOnline={isOnline}
               isSyncing={isSyncing}
               onSyncNow={handleSyncNow}
               onRetry={handleRetry}
               onDiscard={handleDiscard}
+              onConfirmExpired={handleConfirmExpired}
             />
           </Suspense>
         )}

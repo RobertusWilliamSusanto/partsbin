@@ -4,11 +4,13 @@ import { RefreshCw, AlertCircle, RotateCcw, Trash2 } from 'lucide-react';
 export default function OfflinePanel({
   pendingCount,
   failedOps,
+  expiredOps = [],
   isOnline,
   isSyncing,
   onSyncNow,
   onRetry,
   onDiscard,
+  onConfirmExpired,
 }) {
   return (
     <>
@@ -30,6 +32,43 @@ export default function OfflinePanel({
           )}
         </div>
       )}
+
+      {expiredOps.map((op) => (
+        <div
+          key={op.id}
+          className="pwa-badge__box glass"
+          style={{ borderColor: 'var(--warning, #eab308)' }}
+          role="alert"
+        >
+          <div className="pwa-badge__text">
+            <AlertCircle size={18} style={{ color: 'var(--warning, #eab308)', flexShrink: 0 }} aria-hidden="true" />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <span style={{ fontWeight: 600, fontSize: 13 }}>Operasi Tertunda &gt; 30 Hari</span>
+              <span style={{ fontSize: 12, opacity: 0.85 }}>Konfirmasi untuk mengirim atau buang perubahan lama ini.</span>
+            </div>
+          </div>
+          <div className="row-wrap" style={{ gap: 4 }}>
+            <button
+              type="button"
+              className="btn btn--primary btn--sm"
+              onClick={() => onConfirmExpired(op.id)}
+              title="Konfirmasi dan kirim operasi ke server"
+            >
+              <RotateCcw size={14} aria-hidden="true" />
+              <span>Kirim</span>
+            </button>
+            <button
+              type="button"
+              className="btn btn--ghost btn--sm"
+              onClick={() => onDiscard(op.id)}
+              title="Buang operasi kedaluwarsa ini"
+            >
+              <Trash2 size={14} aria-hidden="true" />
+              <span>Buang</span>
+            </button>
+          </div>
+        </div>
+      ))}
 
       {failedOps.map((op) => (
         <div
