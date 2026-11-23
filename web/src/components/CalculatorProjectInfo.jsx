@@ -10,7 +10,6 @@ export default function CalculatorProjectInfo({
   onCoverChange,
   onCoverRemove,
   disabled,
-  isOnline,
 }) {
   return (
     <div className="card stack-md">
@@ -50,7 +49,7 @@ export default function CalculatorProjectInfo({
         file={coverFile}
         onChange={onCoverChange}
         onRemove={onCoverRemove}
-        disabled={disabled || !isOnline}
+        disabled={disabled}
       />
     </div>
   );

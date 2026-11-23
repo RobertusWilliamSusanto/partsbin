@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { RotateCcw, Trash2, AlertCircle } from 'lucide-react';
 import { useComponents, invalidateComponentsCache } from '../hooks/useComponents';
 import { invalidateProjectsCache } from '../hooks/useProjects';
-import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import projectService from '../services/projectService';
 import { calcBom } from '../utils/bom';
 import {
@@ -18,7 +17,6 @@ import CalculatorSummary from '../components/CalculatorSummary';
 
 export default function CalculatorPage() {
   const navigate = useNavigate();
-  const isOnline = useOnlineStatus();
   const { components } = useComponents();
 
   const [name, setName] = useState('');
@@ -87,10 +85,6 @@ export default function CalculatorPage() {
   };
 
   const handleFinalize = async () => {
-    if (!isOnline) {
-      setError('Aksi finalisasi proyek dinonaktifkan saat mode offline.');
-      return;
-    }
     const trimmed = name.trim();
     if (!trimmed) {
       setError('Nama proyek wajib diisi.');
@@ -181,7 +175,6 @@ export default function CalculatorPage() {
         onCoverChange={setCoverFile}
         onCoverRemove={() => setCoverFile(null)}
         disabled={submitting}
-        isOnline={isOnline}
       />
 
       <CalculatorBomBuilder
@@ -195,7 +188,6 @@ export default function CalculatorPage() {
 
       <CalculatorSummary
         summary={summary}
-        isOnline={isOnline}
         submitting={submitting}
         onFinalize={handleFinalize}
       />

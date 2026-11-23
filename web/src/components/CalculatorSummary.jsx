@@ -10,7 +10,6 @@ function getReadinessFillClass(percent, totalItems) {
 // Subkomponen ringkasan live kesiapan rakit BOM, estimasi biaya, dan tombol finalisasi proyek
 export default function CalculatorSummary({
   summary,
-  isOnline,
   submitting,
   onFinalize,
 }) {
@@ -88,7 +87,7 @@ export default function CalculatorSummary({
         className="btn btn--primary"
         style={{ minHeight: 48, marginTop: 8 }}
         onClick={onFinalize}
-        disabled={submitting || !isOnline}
+        disabled={submitting}
       >
         <Save size={18} strokeWidth={1.75} aria-hidden="true" />
         <span>{submitting ? 'Menyimpan Proyek...' : 'Finalisasi & Simpan Proyek'}</span>
