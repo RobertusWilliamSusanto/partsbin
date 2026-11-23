@@ -137,6 +137,7 @@ export async function enqueueOp({ endpoint, method, entityType, entityId, payloa
     clientTimestamp: new Date().toISOString(),
     status: 'pending',
     retryCount: 0,
+    attempts: 0,
     lastError: null,
     createdAt: new Date().toISOString(),
   };

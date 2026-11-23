@@ -110,8 +110,49 @@ export async function flushOutbox() {
           continue;
         }
 
+        op.attempts = (op.attempts || 0) + 1;
+        await putItem('outbox', op);
+
         const sender = customSender || defaultSend;
-        const result = await sender(op);
+        let result = null;
+
+        // Dedup POST ambigu: periksa ke server via GET sebelum mencoba ulang pembuatan entitas
+        if ((op.attempts > 1 || op.retryCount > 0) && op.method === 'POST') {
+          try {
+            const checkUrl = op.entityType === 'component' ? '/components' : '/projects';
+            const serverCheck = await sender({ method: 'GET', endpoint: checkUrl });
+            const list = Array.isArray(serverCheck?.data) ? serverCheck.data : [];
+            const duplicate = list.find((it) => it.name === op.payload?.name);
+            if (duplicate) {
+              result = { ok: true, status: 200, data: duplicate };
+            }
+          } catch {
+            // Abaikan kesalahan verifikasi server dan lanjutkan ke pengiriman
+          }
+        }
+
+        if (!result) {
+          result = await sender(op);
+        }
+
+        // Idempotensi retry: DELETE 404 pada percobaan ulang dianggap sukses karena data telah terhapus
+        if (!result.ok && result.status === 404 && op.method === 'DELETE' && (op.attempts > 1 || op.retryCount > 0)) {
+          result = { ok: true, status: 200, data: null };
+        }
+
+        // Idempotensi retry: POST item 409 pada percobaan ulang dianggap sukses jika item telah tercatat di server
+        if (!result.ok && result.status === 409 && op.entityType === 'project_item' && (op.attempts > 1 || op.retryCount > 0)) {
+          try {
+            const projCheck = await sender({ method: 'GET', endpoint: `/projects/${op.entityId}` });
+            const items = projCheck?.data?.items || [];
+            const existing = items.find((it) => it.component_id === op.payload?.component_id);
+            if (existing) {
+              result = { ok: true, status: 200, data: existing };
+            }
+          } catch {
+            // Abaikan kegagalan verifikasi
+          }
+        }
 
         if (result.ok) {
           // Sukses 2xx: hapus op dari outbox dan simpan hasil server ke penyimpanan lokal
