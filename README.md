@@ -42,6 +42,7 @@ Sistem desain menggunakan pendekatan **Technician's Bench Notebook** (*Precision
 4. **Profil & Tentang (`/profile`)**: Identitas pembuat, kontrol tema terang/gelap, status koneksi jaringan (`useOnlineStatus`), status draf tersimpan, serta ringkasan arsitektur dan rumus BOM.
 5. **Sinkronisasi Cache Lintas-Hook (`dataCache.js`)**: Setiap mutasi stok/data komponen otomatis meng-invalidasi cache proyek (agar `readiness_percent` dan `shopping_list` selalu akurat saat pindah tab), dan setiap mutasi proyek/item BOM otomatis meng-invalidasi cache detail komponen (`used_in_projects`).
 6. **Dukungan Offline-First & Sinkronisasi Otomatis (IndexedDB + Outbox FIFO)**: Pengguna dapat membaca dan memodifikasi data (buat/edit/hapus komponen, koreksi stok via stepper, buat proyek kalkulator beserta BOM, dan ubah status proyek) saat perangkat offline. Seluruh operasi disimpan lokal di IndexedDB dan diantrekan pada outbox, lalu otomatis disinkronkan ke server secara berurutan saat internet kembali aktif.
+7. **Dokumentasi Foto Proyek & Ekspor Dokumen PDF A4 (`/projects/:id`)**: Dokumentasi multi-foto per proyek (galeri grid 2 kolom rasio 4:3, kompresi klien < 200 KB via HTML5 Canvas, unggah sekuensial, edit caption inline maks 200 karakter, batas maksimal 12 foto). Tombol **Unduh PDF** mencetak dokumen rapi berstandar A4 menggunakan stylesheet cetak murni (`@media print` + `window.print()`) tanpa dependensi pustaka pihak ketiga.
 
 ---
 
@@ -57,17 +58,51 @@ flowchart LR
   Api -->|"Supabase JS Client"| DB[("Supabase PostgreSQL")]
 ```
 
-### Entity Relationship Diagram (3 Tabel)
+### Entity Relationship Diagram (4 Tabel)
 
 ```mermaid
 erDiagram
   components ||--o{ project_items : "ON DELETE RESTRICT"
   projects ||--o{ project_items : "ON DELETE CASCADE"
+  projects ||--o{ project_photos : "ON DELETE CASCADE"
 
   components {
     uuid id PK
     varchar name
     varchar category
+    int stock
+    int min_stock
+    int unit_price
+    varchar bin_location
+    text specs
+    timestamptz created_at
+  }
+
+  projects {
+    uuid id PK
+    varchar name
+    text description
+    varchar status
+    text image_path
+    timestamptz created_at
+  }
+
+  project_items {
+    uuid id PK
+    uuid project_id FK
+    uuid component_id FK
+    int quantity_needed
+    timestamptz created_at
+  }
+
+  project_photos {
+    uuid id PK
+    uuid project_id FK
+    text image_path
+    varchar caption
+    timestamptz created_at
+  }
+```
     int stock
     int min_stock
     int unit_price
@@ -260,6 +295,15 @@ curl -s -X PATCH http://localhost:3000/api/components/UUID_KOMPONEN/stock -H "Co
 ### E. Uji Preview Produksi & Offline
 1. Jalankan `npm run build` lalu `npm run preview -- --host` di dalam folder `web/`.
 2. Buka http://localhost:4173 di Chrome/Edge, buka DevTools -> tab **Application** -> **Service Workers** (gunakan tombol **Unregister** bila ingin membersihkan cache pengujian lama) dan uji toggle **Offline** di tab **Network**.
+
+### F. Urutan Deploy Fitur Dokumentasi & PDF (v5.0)
+1. **Migrasi Database**: Jalankan `api/sql/migration_v5.sql` pada SQL Editor Supabase STAGING lalu PRODUKSI (sifatnya aditif dan idempoten).
+2. **Deploy Backend API**: Deploy direktori `api/` ke Vercel dan uji endpoint #17-#19 menggunakan `requests.http`.
+3. **Deploy Frontend PWA**: Deploy direktori `web/` ke Vercel setelah backend API terbukti aktif.
+
+> **Catatan Responsi Terkait Urutan Deploy**:
+> - Jika backend API di-deploy mendahului migrasi SQL, query foto memiliki mekanisme *fail-safe* `try/catch` yang mengembalikan `photos: []`, sehingga API tidak pernah mematikan halaman detail proyek.
+> - Jika web di-deploy mendahului backend API, bagian foto di halaman detail akan menampilkan pesan informatif / empty state saat memanggil endpoint yang belum tersedia.
 
 ---
 
