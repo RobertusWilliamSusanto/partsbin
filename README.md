@@ -123,9 +123,10 @@ partsbin/
     │   ├── config/{api.js, profile.js}
     │   ├── services/{componentService.js, projectService.js}
     │   ├── hooks/{useComponents.js, useProjects.js, useOnlineStatus.js, useTheme.js}
-    │   ├── utils/{dataCache.js, draftStorage.js, format.js, paginate.js, bom.js}
+    │   ├── utils/{dataCache.js, draftStorage.js, format.js, paginate.js, bom.js, chunkReload.js, safeOffline.js}
     │   ├── components/
     │   │   ├── modals/ConfirmModal.jsx
+    │   │   ├── RouteErrorBoundary.jsx
     │   │   ├── ComponentInlineForm.jsx
     │   │   ├── TopBar.jsx
     │   │   ├── BottomNav.jsx
@@ -267,7 +268,8 @@ curl -s -X PATCH http://localhost:3000/api/components/UUID_KOMPONEN/stock -H "Co
 Aplikasi PartsBin dirancang dengan postur keamanan yang disesuaikan untuk tugas praktikum:
 1. **Frontend Bersih dari Kunci API**: Klien browser murni berkomunikasi dengan backend Express via Axios JSON. Kunci Supabase tidak pernah di-bundle ke dalam build frontend.
 2. **Validasi File & Input Ketat**: Unggahan foto proyek diperiksa menggunakan inspeksi *magic bytes* biner in-memory (`memoryStorage`) tanpa menyentuh disk serverless, dibatasi 2 MB, dan parameter rute divalidasi format UUID secara terpusat (`validateUuid.js`).
-3. **Keterbatasan yang Diketahui untuk Praktikum**: Endpoint API tidak dipasangi sistem login/token pengguna untuk memenuhi kepatuhan arsitektur Modul 1 dan memudahkan pengujian langsung oleh asisten praktikum saat responsi. Kebijakan CORS membatasi akses lintas browser, namun request server-ke-server langsung (seperti `curl`) tetap dapat menjangkau endpoint API publik.
+3. **Ketahanan Update PWA & Stale Chunk**: Aplikasi menerapkan penanganan kegagalan chunk modul otomatis (`vite:preloadError` dengan throttle 10 detik `sessionStorage`), rute boundary cadangan (`RouteErrorBoundary`), pengecualian rewrite `/assets/` pada Vercel (mengembalikan 404 asli alih-alih 200 `text/html`), serta *fail-open* timeout 2500ms pada modul offline sehingga transisi update tidak pernah membekukan aplikasi.
+4. **Keterbatasan yang Diketahui untuk Praktikum**: Endpoint API tidak dipasangi sistem login/token pengguna untuk memenuhi kepatuhan arsitektur Modul 1 dan memudahkan pengujian langsung oleh asisten praktikum saat responsi. Kebijakan CORS membatasi akses lintas browser, namun request server-ke-server langsung (seperti `curl`) tetap dapat menjangkau endpoint API publik.
 
 ---
 
