@@ -76,7 +76,7 @@ export default defineConfig({
             options: {
               cacheName: 'partsbin-images',
               expiration: {
-                maxEntries: 60,
+                maxEntries: 150, // Dinaikkan untuk menampung foto dokumentasi proyek di cache
                 maxAgeSeconds: 30 * 24 * 60 * 60, // 30 hari
               },
               cacheableResponse: {

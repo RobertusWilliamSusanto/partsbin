@@ -66,8 +66,18 @@ export async function overlayProjects(serverList) {
     if (local && (isPending || isRecentlySynced)) {
       result.push(local);
     } else {
-      result.push(proj);
-      await putItem('projects', proj);
+      // Pertahankan field detail lokal (photos, items, summary) jika sudah tersimpan agar tidak terhapus oleh list ringkas
+      const merged = local
+        ? {
+            ...local,
+            ...proj,
+            photos: local.photos ?? proj.photos,
+            items: local.items ?? proj.items,
+            summary: local.summary ?? proj.summary,
+          }
+        : proj;
+      result.push(merged);
+      await putItem('projects', merged);
     }
   }
 
