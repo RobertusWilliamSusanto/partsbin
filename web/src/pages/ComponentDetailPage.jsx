@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { AlertTriangle, RefreshCw, X } from 'lucide-react';
 import {
@@ -23,6 +23,25 @@ export default function ComponentDetailPage() {
   const [deleting, setDeleting] = useState(false);
   const [updatingStock, setUpdatingStock] = useState(false);
   const [toastError, setToastError] = useState(null);
+
+  // Alihkan URL sementara ke URL riil saat komponen offline selesai disinkronkan ke server
+  useEffect(() => {
+    if (!id || !id.startsWith('tmp_')) return;
+    let active = true;
+    const checkMapping = async () => {
+      const { getItem } = await import('../offline/db');
+      const mapped = await getItem('idmap', id);
+      if (active && mapped?.realId) {
+        navigate(`/components/${mapped.realId}`, { replace: true });
+      }
+    };
+    checkMapping();
+    window.addEventListener('partsbin:sync-event', checkMapping);
+    return () => {
+      active = false;
+      window.removeEventListener('partsbin:sync-event', checkMapping);
+    };
+  }, [id, navigate]);
 
   const handleStepStock = async (delta) => {
     if (!component) return;

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Pencil, Trash2, Plus, AlertTriangle, X } from 'lucide-react';
 import { useProject, invalidateProjectsCache } from '../hooks/useProjects';
@@ -30,6 +30,25 @@ export default function ProjectDetailPage() {
   const [qtyNeeded, setQtyNeeded] = useState('1');
   const [addingItem, setAddingItem] = useState(false);
   const [toastError, setToastError] = useState(() => location.state?.warning || null);
+
+  // Alihkan URL sementara ke URL riil saat proyek offline selesai disinkronkan ke server
+  useEffect(() => {
+    if (!id || !id.startsWith('tmp_')) return;
+    let active = true;
+    const checkMapping = async () => {
+      const { getItem } = await import('../offline/db');
+      const mapped = await getItem('idmap', id);
+      if (active && mapped?.realId) {
+        navigate(`/projects/${mapped.realId}`, { replace: true });
+      }
+    };
+    checkMapping();
+    window.addEventListener('partsbin:sync-event', checkMapping);
+    return () => {
+      active = false;
+      window.removeEventListener('partsbin:sync-event', checkMapping);
+    };
+  }, [id, navigate]);
 
   const handleStatusChange = async (newStatus) => {
     if (!project || updatingStatus || project.status === newStatus) return;
