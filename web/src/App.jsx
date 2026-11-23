@@ -11,6 +11,7 @@ import { useTheme } from './hooks/useTheme';
 import TopBar from './components/TopBar';
 import PWABadge from './components/PWABadge';
 import BottomNav from './components/BottomNav';
+import RouteErrorBoundary from './components/RouteErrorBoundary';
 import DashboardPage from './pages/DashboardPage';
 import ComponentListPage from './pages/ComponentListPage';
 import ComponentDetailPage from './pages/ComponentDetailPage';
@@ -70,22 +71,24 @@ function AppShell() {
       <PWABadge />
 
       <main className="main">
-        <Suspense fallback={<div className="card loading-state"><span>Memuat halaman...</span></div>}>
-          <Routes>
-            <Route path="/" element={<DashboardPage />} />
-            <Route path="/components" element={<ComponentListPage />} />
-            <Route path="/components/:id" element={<ComponentDetailPage />} />
-            <Route path="/calculator" element={<CalculatorPage />} />
-            <Route path="/projects/new" element={<Navigate to="/calculator" replace />} />
-            <Route path="/projects" element={<Navigate to="/" replace />} />
-            <Route path="/projects/:id" element={<ProjectDetailPage />} />
-            <Route
-              path="/profile"
-              element={<ProfilePage theme={theme} onToggleTheme={toggleTheme} />}
-            />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </Suspense>
+        <RouteErrorBoundary resetKey={pathname}>
+          <Suspense fallback={<div className="card loading-state"><span>Memuat halaman...</span></div>}>
+            <Routes>
+              <Route path="/" element={<DashboardPage />} />
+              <Route path="/components" element={<ComponentListPage />} />
+              <Route path="/components/:id" element={<ComponentDetailPage />} />
+              <Route path="/calculator" element={<CalculatorPage />} />
+              <Route path="/projects/new" element={<Navigate to="/calculator" replace />} />
+              <Route path="/projects" element={<Navigate to="/" replace />} />
+              <Route path="/projects/:id" element={<ProjectDetailPage />} />
+              <Route
+                path="/profile"
+                element={<ProfilePage theme={theme} onToggleTheme={toggleTheme} />}
+              />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Suspense>
+        </RouteErrorBoundary>
       </main>
 
       <BottomNav />
