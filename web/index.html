@@ -26,6 +26,14 @@
         }
       })();
     </script>
+    <script>
+      // Tangkap event install sedini mungkin sebelum React me-mount komponen PWABadge
+      window.addEventListener('beforeinstallprompt', function (e) {
+        e.preventDefault();
+        window.__pwaPrompt = e;
+        window.dispatchEvent(new Event('partsbin:pwa-prompt'));
+      });
+    </script>
   </head>
   <body>
     <div id="root"></div>
