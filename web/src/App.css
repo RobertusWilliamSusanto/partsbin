@@ -1037,6 +1037,8 @@
   border-radius: 8px;
   padding: 8px;
   overflow: hidden;
+  content-visibility: auto;
+  contain-intrinsic-size: 200px 180px;
 }
 
 .gallery-item__img-wrapper {

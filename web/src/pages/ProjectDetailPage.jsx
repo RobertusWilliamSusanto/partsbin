@@ -245,6 +245,7 @@ export default function ProjectDetailPage() {
       <ProjectGallery
         projectId={project.id}
         photos={project.photos || []}
+        photoLimit={project.photo_limit ?? 12}
         onPhotoMutated={() => {
           invalidateProjectsCache(project.id);
           refetch({ silent: true });
