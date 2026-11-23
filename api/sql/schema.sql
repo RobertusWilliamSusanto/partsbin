@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS project_photos (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   image_path TEXT NOT NULL,
+  thumb_path TEXT,
   caption VARCHAR(200) NOT NULL DEFAULT '',
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

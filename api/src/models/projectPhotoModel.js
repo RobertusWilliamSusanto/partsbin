@@ -7,7 +7,7 @@ export const projectPhotoModel = {
     try {
       const { data, error } = await supabase
         .from('project_photos')
-        .select('id, project_id, image_path, caption, created_at')
+        .select('id, project_id, image_path, thumb_path, caption, created_at')
         .eq('project_id', projectId)
         .order('created_at', { ascending: true });
 
@@ -21,7 +21,9 @@ export const projectPhotoModel = {
         id: photo.id,
         project_id: photo.project_id,
         image_path: photo.image_path,
+        thumb_path: photo.thumb_path ?? null,
         image_url: getImageUrl(photo.image_path),
+        thumb_url: getImageUrl(photo.thumb_path),
         caption: photo.caption,
         created_at: photo.created_at,
       }));
@@ -43,10 +45,10 @@ export const projectPhotoModel = {
   },
 
   // Simpan metadata foto baru ke database setelah berkas sukses diunggah ke Storage
-  async create({ project_id, image_path, caption = '' }) {
+  async create({ project_id, image_path, thumb_path = null, caption = '' }) {
     const { data, error } = await supabase
       .from('project_photos')
-      .insert({ project_id, image_path, caption })
+      .insert({ project_id, image_path, thumb_path, caption })
       .select()
       .single();
 
@@ -54,6 +56,7 @@ export const projectPhotoModel = {
     return {
       ...data,
       image_url: getImageUrl(data.image_path),
+      thumb_url: getImageUrl(data.thumb_path),
     };
   },
 
@@ -73,6 +76,7 @@ export const projectPhotoModel = {
     return {
       ...updated,
       image_url: getImageUrl(updated.image_path),
+      thumb_url: getImageUrl(updated.thumb_path),
     };
   },
 
@@ -89,10 +93,11 @@ export const projectPhotoModel = {
     if (!data || data.length === 0) return null;
 
     const deleted = data[0];
-    if (deleted.image_path) {
+    const pathsToRemove = [deleted.image_path, deleted.thumb_path].filter(Boolean);
+    if (pathsToRemove.length > 0) {
       supabase.storage
         .from('project-images')
-        .remove([deleted.image_path])
+        .remove(pathsToRemove)
         .catch((cleanErr) => {
           console.warn('[STORAGE_DELETE_WARN] Gagal menghapus berkas foto di storage:', cleanErr);
         });
@@ -101,6 +106,7 @@ export const projectPhotoModel = {
     return {
       ...deleted,
       image_url: null,
+      thumb_url: null,
     };
   },
 
@@ -108,13 +114,18 @@ export const projectPhotoModel = {
   async getAllImagePaths(projectId) {
     const { data, error } = await supabase
       .from('project_photos')
-      .select('image_path')
+      .select('image_path, thumb_path')
       .eq('project_id', projectId);
 
     if (error) {
       console.warn('[PROJECT_PHOTOS_WARN] Gagal membaca list path foto:', error.message || error);
       return [];
     }
-    return (data || []).map((row) => row.image_path).filter(Boolean);
+    const paths = [];
+    for (const row of data || []) {
+      if (row.image_path) paths.push(row.image_path);
+      if (row.thumb_path) paths.push(row.thumb_path);
+    }
+    return paths;
   },
 };

@@ -149,14 +149,18 @@ export const projectModel = {
         });
     }
 
-    // Best-effort hapus seluruh berkas foto dokumentasi proyek di storage jika ada
+    // Best-effort hapus seluruh berkas foto dokumentasi proyek di storage dalam batch <= 100 path
     if (photoPaths.length > 0) {
-      supabase.storage
-        .from('project-images')
-        .remove(photoPaths)
-        .catch((err) => {
-          console.warn('[STORAGE_DELETE_WARN] Gagal menghapus foto dokumentasi di storage:', err);
-        });
+      const remainingPaths = [...photoPaths];
+      while (remainingPaths.length > 0) {
+        const batch = remainingPaths.splice(0, 100);
+        supabase.storage
+          .from('project-images')
+          .remove(batch)
+          .catch((err) => {
+            console.warn('[STORAGE_DELETE_WARN] Gagal menghapus foto dokumentasi di storage:', err);
+          });
+      }
     }
 
     return {
