@@ -50,8 +50,8 @@ export default function ProjectDetailPage() {
       const { exportProjectPdf } = await import('../utils/pdfExport');
       await exportProjectPdf(project);
     } catch (err) {
-      console.error('Gagal membuat berkas PDF:', err);
-      setToastError('Gagal membuat berkas PDF. Silakan coba lagi.');
+      console.error('Gagal membuat berkas PDF langsung, mengalihkan ke dialog cetak browser:', err);
+      handlePrintDocument();
     } finally {
       setDownloadingPdf(false);
     }
