@@ -1,27 +1,36 @@
 import { Link } from 'react-router-dom';
-import { Plus, Minus, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Plus, Minus, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
 import { formatRupiah } from '../utils/format';
 
 // Subkomponen kartu item katalog komponen dengan link ke detail dan stepper stok cepat
 export default function ComponentCardItem({
   comp,
-  isOnline,
   isBusy,
   onStepStock,
 }) {
+  const isPending = String(comp.id).startsWith('tmp_');
+
   return (
     <li className="card card--interactive card--flex">
       <Link to={`/components/${comp.id}`} className="card-link-area">
         <div className="card-head">
           <span className="card-title">{comp.name}</span>
-          <span className={`chip chip--${comp.is_low_stock ? 'warn' : 'ok'}`}>
-            {comp.is_low_stock ? (
-              <AlertTriangle size={20} strokeWidth={1.75} aria-hidden="true" />
-            ) : (
-              <CheckCircle2 size={20} strokeWidth={1.75} aria-hidden="true" />
+          <div className="row-wrap" style={{ gap: 4 }}>
+            {isPending && (
+              <span className="chip chip--neutral" title="Perubahan belum tersinkron ke server">
+                <Clock size={14} aria-hidden="true" />
+                <span>Menunggu</span>
+              </span>
             )}
-            <span>{comp.is_low_stock ? 'Stok Menipis' : 'Cukup'}</span>
-          </span>
+            <span className={`chip chip--${comp.is_low_stock ? 'warn' : 'ok'}`}>
+              {comp.is_low_stock ? (
+                <AlertTriangle size={20} strokeWidth={1.75} aria-hidden="true" />
+              ) : (
+                <CheckCircle2 size={20} strokeWidth={1.75} aria-hidden="true" />
+              )}
+              <span>{comp.is_low_stock ? 'Stok Menipis' : 'Cukup'}</span>
+            </span>
+          </div>
         </div>
         <div className="row-wrap">
           <span className="chip chip--neutral">{comp.category}</span>
@@ -39,7 +48,7 @@ export default function ComponentCardItem({
             type="button"
             className="stepper-btn"
             onClick={() => onStepStock(comp, -1)}
-            disabled={comp.stock === 0 || !isOnline || isBusy}
+            disabled={comp.stock === 0 || isBusy}
             aria-label={`Kurangi stok ${comp.name}`}
           >
             <Minus size={20} strokeWidth={1.75} aria-hidden="true" />
@@ -49,7 +58,7 @@ export default function ComponentCardItem({
             type="button"
             className="stepper-btn"
             onClick={() => onStepStock(comp, 1)}
-            disabled={!isOnline || isBusy}
+            disabled={isBusy}
             aria-label={`Tambah stok ${comp.name}`}
           >
             <Plus size={20} strokeWidth={1.75} aria-hidden="true" />
