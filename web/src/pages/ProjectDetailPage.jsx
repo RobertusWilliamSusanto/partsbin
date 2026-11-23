@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import { Link, useParams, useNavigate, useLocation } from 'react-router-dom';
-import { Pencil, Trash2, Plus, AlertTriangle, X, FileDown } from 'lucide-react';
+import { Pencil, Trash2, Plus, AlertTriangle, X, FileDown, Printer } from 'lucide-react';
 import { useProject, invalidateProjectsCache } from '../hooks/useProjects';
 import { useComponents, invalidateComponentsCache } from '../hooks/useComponents';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
@@ -38,11 +38,27 @@ export default function ProjectDetailPage() {
   const isOnline = useOnlineStatus();
   const [printing, setPrinting] = useState(false);
   const [printPreparing, setPrintPreparing] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   const isPrintingRef = useRef(false);
 
-  // Alur cetak PDF: render komponen cetak -> tunggu gambar siap -> window.print() -> pulihkan judul
-  const handleDownloadPdf = () => {
+  // Alur unduh berkas PDF biner langsung sekali klik tanpa dialog printer browser
+  const handleDownloadPdf = async () => {
+    if (downloadingPdf || !project) return;
+    try {
+      setDownloadingPdf(true);
+      const { exportProjectPdf } = await import('../utils/pdfExport');
+      await exportProjectPdf(project);
+    } catch (err) {
+      console.error('Gagal membuat berkas PDF:', err);
+      setToastError('Gagal membuat berkas PDF. Silakan coba lagi.');
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
+
+  // Alur cetak fisik via browser: render komponen cetak -> window.print()
+  const handlePrintDocument = () => {
     if (isPrintingRef.current || printing || !project) return;
     isPrintingRef.current = true;
     setPrintPreparing(true);
@@ -218,22 +234,35 @@ export default function ProjectDetailPage() {
               <button type="button" className="btn btn--danger" style={{ flex: 1 }} onClick={() => setIsDeleteProjOpen(true)}><Trash2 size={18} /><span>Hapus</span></button>
             </div>
             <div className="stack-sm no-print" style={{ marginTop: '4px' }}>
-              <button
-                type="button"
-                className="btn btn--primary"
-                onClick={handleDownloadPdf}
-                disabled={printing}
-                style={{ width: '100%' }}
-              >
-                <FileDown size={18} />
-                <span>{printPreparing ? 'Menyiapkan Dokumen...' : 'Unduh PDF'}</span>
-              </button>
+              <div className="row-wrap" style={{ gap: '8px' }}>
+                <button
+                  type="button"
+                  className="btn btn--primary"
+                  onClick={handleDownloadPdf}
+                  disabled={downloadingPdf}
+                  style={{ flex: 1, minWidth: '130px' }}
+                >
+                  <FileDown size={18} />
+                  <span>{downloadingPdf ? 'Mengunduh PDF...' : 'Unduh PDF'}</span>
+                </button>
+                <button
+                  type="button"
+                  className="btn btn--outline"
+                  onClick={handlePrintDocument}
+                  disabled={printing}
+                  style={{ flex: 1, minWidth: '130px' }}
+                  title="Cetak fisik lewat dialog printer browser"
+                >
+                  <Printer size={18} />
+                  <span>{printPreparing ? 'Menyiapkan...' : 'Cetak Dokumen'}</span>
+                </button>
+              </div>
               <p className="muted" style={{ fontSize: '0.75rem', textAlign: 'center', margin: 0 }}>
-                Di dialog cetak pilih &quot;Simpan sebagai PDF&quot; dan matikan &quot;Header dan footer&quot;.
+                Tombol &quot;Unduh PDF&quot; langsung menyimpan berkas .pdf ke perangkat tanpa dialog printer.
               </p>
               {!isOnline && (
                 <p className="muted" style={{ fontSize: '0.75rem', textAlign: 'center', margin: 0, color: 'var(--warn)' }}>
-                  Mode offline: Gambar yang belum tersimpan di cache akan diganti placeholder pada dokumen cetak.
+                  Mode offline: Gambar yang belum tersimpan di cache akan diganti placeholder pada dokumen.
                 </p>
               )}
             </div>
