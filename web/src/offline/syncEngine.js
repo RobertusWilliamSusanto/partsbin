@@ -99,6 +99,7 @@ export async function flushOutbox() {
 
   const executeFlush = async () => {
     isFlushingInMemory = true;
+    let processedCount = 0;
     try {
       const ops = await getPendingOps();
       for (const op of ops) {
@@ -191,6 +192,7 @@ export async function flushOutbox() {
           }
           await removeOp(op.id);
           backoffIndex = 0; // Reset backoff jika operasi berhasil
+          processedCount += 1;
           broadcastSyncEvent('op_synced', { opId: op.id, entityType: op.entityType });
         } else if (result.isNetworkOr5xx) {
           // Kendala jaringan atau server (5xx/429): jadwalkan backoff berjenjang dan hentikan loop ini
@@ -203,12 +205,16 @@ export async function flushOutbox() {
         } else {
           // Error 4xx permanen: tandai op sebagai failed, tidak memblokir op lain yang independen
           await updateOpStatus(op.id, 'failed', result.message);
+          processedCount += 1;
           broadcastSyncEvent('op_failed', { opId: op.id, message: result.message });
         }
       }
     } finally {
       isFlushingInMemory = false;
-      broadcastSyncEvent('sync_completed');
+      // Batasi siaran sinkronisasi selesai hanya jika ada minimal satu operasi yang diproses
+      if (processedCount > 0) {
+        broadcastSyncEvent('sync_completed');
+      }
     }
   };
 

@@ -142,10 +142,13 @@ partsbin/
     │   │   ├── draftStorage.js       # Auto-save draf kalkulator & komponen di localStorage
     │   │   ├── dataCache.js          # In-memory cross-hook cache invalidation
     │   │   ├── bom.js                # Kalkulator rumus BOM terisolasi (live calculation)
-    │   │   └── imageCompress.js      # Kompresi Canvas API (createImageBitmap, max 1024px, target < 200 KB)
+    │   │   ├── imageCompress.js      # Kompresi Canvas API (createImageBitmap, max 1024px, target < 200 KB)
+    │   │   ├── chunkReload.js        # Utilitas penanganan vite:preloadError dengan pembatas reload 10 detik
+    │   │   └── safeOffline.js        # Utilitas wrapper async fail-open timeout 2500ms modul offline
     │   ├── components/
     │   │   ├── modals/
     │   │   │   └── ConfirmModal.jsx        # Dialog konfirmasi (Pola 3 Modul 5)
+    │   │   ├── RouteErrorBoundary.jsx      # Boundary error rute pembungkus Suspense dengan tombol pemulihan
     │   │   ├── ComponentInlineForm.jsx     # Form collapsible tambah/edit komponen + draf (dipertahankan)
     │   │   ├── TopBar.jsx            # Header sticky + judul halaman + ThemeToggle
     │   │   ├── BottomNav.jsx         # Navigasi bawah 4 tab (Dashboard, Komponen, Kalkulator, Profil)
@@ -395,4 +398,19 @@ Berikut adalah rekapitulasi audit keamanan dan mitigasi yang diterapkan pada rep
 | **H7** | Tidak ada rate limiting; errorHandler aman | **Terkonfirmasi** | Error 500 tidak membocorkan stack trace ke client. Ditambahkan validasi format UUID terpusat (`validateUuid.js`) pada parameter `:id` dan `:itemId`. Rate limiting ditiadakan sesuai larangan middleware berat di praktikum. | **Mitigasi Parsial** |
 | **H8** | Resolusi konflik Last-Write-Wins (LWW) tanpa kolom versi | **Terkonfirmasi** | Skema tabel database Modul 1 tidak memiliki kolom versi/timestamp konkurensi. Mutasi offline dieksekusi secara FIFO saat sinkronisasi (last-write-wins). | **Keterbatasan Diketahui** (Pilihan Desain Sederhana) |
 | **H9** | Batas kapasitas outbox offline 200 operasi dan kedaluwarsa 30 hari | **Terkonfirmasi** | Kuota outbox dibatasi maksimal 200 entri untuk mencegah kehabisan memori browser (QuotaExceededError). Operasi yang tertahan > 30 hari ditandai kedaluwarsa. | **Mitigasi Diterapkan** |
+
+---
+
+## 9. Siklus Update & Ketahanan Chunk (Stale-Chunk Resilience)
+
+Aplikasi menerapkan mitigasi 4 lapis untuk mencegah kendala macet atau blank screen saat transisi update:
+1. **Pengecualian Aset pada Rewrite Vercel (`web/vercel.json`)**:
+   Rewrite SPA diubah menjadi `"/((?!assets/).*)"` agar permintaan berkas chunk JS lama yang telah dihapus di server mengembalikan HTTP 404 asli, bukan file `index.html` (MIME `text/html`). Hal ini krusial karena browser memberlakukan pemeriksaan MIME ketat pada skrip modul ES (`<script type="module">` dan dynamic `import()`), sehingga respons HTML akan memicu kegagalan modul yang terdeteksi dengan tepat oleh Vite.
+2. **Reload Otomatis Terkendali (`web/src/utils/chunkReload.js`)**:
+   Event `vite:preloadError` ditangani dengan memicu `window.location.reload()` secara otomatis untuk mengambil HTML dan manifest bundle terbaru dari server/SW. Untuk mencegah loop refresh tanpa henti saat jaringan bermasalah, reload dibatasi maksimal 1 kali dalam rentang 10 detik via cap waktu `sessionStorage`.
+3. **Boundary Rute Cadangan (`web/src/components/RouteErrorBoundary.jsx`)**:
+   Membungkus `<Suspense>` rute utama untuk menangkap kegagalan render atau impor dinamis komponen rute. Error boundary mereset status error secara otomatis saat pengguna berpindah rute (`resetKey = location.pathname`) serta menyediakan tombol pemulihan interaktif (*"Muat Ulang Halaman"*).
+4. **Lapisan Offline Fail-Open (`web/src/utils/safeOffline.js`)**:
+   Modul offline dimuat secara dinamis via `import()` demi menjaga anggaran bundle awal. Pemanggilan operasi offline dibungkus dengan batas waktu 2500ms (`withTimeout`) dan mekanisme *fail-open*: bila impor chunk offline gagal atau IndexedDB terkendala, aplikasi langsung jatuh kembali ke pengambilan data API online tanpa menghentikan rendering Dashboard atau Katalog Komponen.
+
 
