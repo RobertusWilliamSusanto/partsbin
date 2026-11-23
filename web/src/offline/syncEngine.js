@@ -103,7 +103,10 @@ export async function flushOutbox() {
       const ops = await getPendingOps();
       for (const op of ops) {
         // Tahan operasi proyek yang masih merujuk component_id sementara yang belum tersinkron
-        if (op.payload?.component_id?.startsWith?.('tmp_')) {
+        const hasTempRef =
+          op.payload?.component_id?.startsWith?.('tmp_') ||
+          op.payload?.items?.some?.((it) => it.component_id?.startsWith?.('tmp_'));
+        if (hasTempRef || (op.entityId?.startsWith?.('tmp_') && op.method !== 'POST')) {
           continue;
         }
 

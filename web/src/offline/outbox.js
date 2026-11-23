@@ -67,6 +67,21 @@ export async function enqueueOp({ endpoint, method, entityType, entityId, payloa
     return null;
   }
 
+  // Coalescing: jika entitas adalah data sementara (tmp_*), gabungkan langsung ke op create (POST)
+  const isTempEntity = String(entityId).startsWith('tmp_') || tempId;
+  if (isTempEntity && (method === 'PATCH' || method === 'PUT')) {
+    const targetTempId = entityId || tempId;
+    const createOp = allOps.find(
+      (op) => (op.entityId === targetTempId || op.tempId === targetTempId) && op.method === 'POST' && op.status === 'pending'
+    );
+    if (createOp) {
+      createOp.payload = { ...createOp.payload, ...payload };
+      createOp.clientTimestamp = new Date().toISOString();
+      await putItem('outbox', createOp);
+      return createOp;
+    }
+  }
+
   // Coalescing: jika PATCH stock berulang untuk komponen yang sama, perbarui op sebelumnya
   if (entityType === 'component' && method === 'PATCH') {
     const existingPatch = allOps.find(

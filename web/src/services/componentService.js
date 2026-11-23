@@ -28,6 +28,15 @@ class ComponentService {
   }
 
   async getById(id) {
+    // Guard: jangan pernah mengirim ID sementara (tmp_*) ke API server
+    if (String(id).startsWith('tmp_')) {
+      const { getItem } = await import('../offline/db');
+      const mapped = await getItem('idmap', id);
+      if (mapped?.realId) return this.getById(mapped.realId);
+      const item = await getItem('components', id);
+      if (item) return { data: item };
+      return Promise.reject({ status: 404, message: 'Komponen sementara tidak ditemukan di penyimpanan lokal.' });
+    }
     try {
       const res = await apiClient.get(`/components/${id}`);
       if (res?.data) {
@@ -67,7 +76,7 @@ class ComponentService {
   }
 
   async update(id, data) {
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    if ((typeof navigator !== 'undefined' && !navigator.onLine) || String(id).startsWith('tmp_')) {
       const { offlineUpdateComponent } = await import('../offline/offlineService');
       return offlineUpdateComponent(id, data);
     }
@@ -88,7 +97,7 @@ class ComponentService {
   }
 
   async updateStock(id, stock) {
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    if ((typeof navigator !== 'undefined' && !navigator.onLine) || String(id).startsWith('tmp_')) {
       const { offlineUpdateStock } = await import('../offline/offlineService');
       return offlineUpdateStock(id, stock);
     }
@@ -109,7 +118,7 @@ class ComponentService {
   }
 
   async remove(id) {
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    if ((typeof navigator !== 'undefined' && !navigator.onLine) || String(id).startsWith('tmp_')) {
       const { offlineDeleteComponent } = await import('../offline/offlineService');
       return offlineDeleteComponent(id);
     }

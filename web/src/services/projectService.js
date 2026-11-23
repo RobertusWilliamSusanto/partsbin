@@ -28,6 +28,15 @@ class ProjectService {
   }
 
   async getById(id) {
+    // Guard: jangan pernah mengirim ID sementara (tmp_*) ke API server
+    if (String(id).startsWith('tmp_')) {
+      const { getItem } = await import('../offline/db');
+      const mapped = await getItem('idmap', id);
+      if (mapped?.realId) return this.getById(mapped.realId);
+      const item = await getItem('projects', id);
+      if (item) return { data: item };
+      return Promise.reject({ status: 404, message: 'Proyek sementara tidak ditemukan di penyimpanan lokal.' });
+    }
     try {
       const res = await apiClient.get(`/projects/${id}`);
       if (res?.data) {
@@ -67,7 +76,7 @@ class ProjectService {
   }
 
   async update(id, data) {
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    if ((typeof navigator !== 'undefined' && !navigator.onLine) || String(id).startsWith('tmp_')) {
       const { offlineUpdateProject } = await import('../offline/offlineService');
       return offlineUpdateProject(id, data);
     }
@@ -88,7 +97,7 @@ class ProjectService {
   }
 
   async updateStatus(id, status) {
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    if ((typeof navigator !== 'undefined' && !navigator.onLine) || String(id).startsWith('tmp_')) {
       const { offlineUpdateProjectStatus } = await import('../offline/offlineService');
       return offlineUpdateProjectStatus(id, status);
     }
@@ -134,7 +143,7 @@ class ProjectService {
   }
 
   async remove(id) {
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    if ((typeof navigator !== 'undefined' && !navigator.onLine) || String(id).startsWith('tmp_')) {
       const { offlineDeleteProject } = await import('../offline/offlineService');
       return offlineDeleteProject(id);
     }
@@ -153,7 +162,7 @@ class ProjectService {
   }
 
   async addItem(projectId, data) {
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    if ((typeof navigator !== 'undefined' && !navigator.onLine) || String(projectId).startsWith('tmp_')) {
       const { offlineAddProjectItem } = await import('../offline/offlineService');
       return offlineAddProjectItem(projectId, data);
     }
@@ -170,7 +179,7 @@ class ProjectService {
   }
 
   async removeItem(projectId, itemId) {
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    if ((typeof navigator !== 'undefined' && !navigator.onLine) || String(projectId).startsWith('tmp_')) {
       const { offlineRemoveProjectItem } = await import('../offline/offlineService');
       return offlineRemoveProjectItem(projectId, itemId);
     }
