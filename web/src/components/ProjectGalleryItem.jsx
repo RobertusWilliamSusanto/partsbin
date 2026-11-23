@@ -10,6 +10,7 @@ export default function ProjectGalleryItem({
   disabled,
   onCaptionUpdated,
   onRequestDelete,
+  onPhotoClick,
 }) {
   const [caption, setCaption] = useState(photo.caption || '');
   const [prevServerCaption, setPrevServerCaption] = useState(photo.caption || '');
@@ -40,15 +41,17 @@ export default function ProjectGalleryItem({
   return (
     <div className="gallery-item">
       <div className="gallery-item__img-wrapper">
-        {!imgError && photo.image_url ? (
+        {!imgError && (photo.thumb_url || photo.image_url) ? (
           <img
-            src={photo.image_url}
+            src={photo.thumb_url ?? photo.image_url}
             alt={photo.caption || `Foto dokumentasi ${index + 1}`}
             loading="lazy"
             decoding="async"
             crossOrigin="anonymous"
             onError={() => setImgError(true)}
+            onClick={() => onPhotoClick?.(index)}
             className="gallery-item__img"
+            style={{ cursor: onPhotoClick ? 'pointer' : 'default' }}
           />
         ) : (
           <div className="gallery-item__fallback" aria-label="Gambar gagal dimuat">

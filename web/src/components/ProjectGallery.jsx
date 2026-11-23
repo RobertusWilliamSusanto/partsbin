@@ -1,7 +1,7 @@
-import { useState, useRef } from 'react';
-import { ImagePlus, AlertCircle, RefreshCw } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { ImagePlus, AlertCircle, RefreshCw, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import photoService from '../services/photoService';
-import { compressImage } from '../utils/imageCompress';
+import { compressWithThumb } from '../utils/imageCompress';
 import ConfirmModal from './modals/ConfirmModal';
 import ProjectGalleryItem from './ProjectGalleryItem';
 
@@ -18,6 +18,19 @@ export default function ProjectGallery({ projectId, photos = [], photoLimit = 12
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [failedFiles, setFailedFiles] = useState([]);
   const [prevProjectId, setPrevProjectId] = useState(projectId);
+  const [viewerIndex, setViewerIndex] = useState(null);
+  const dialogRef = useRef(null);
+
+  // Buka atau tutup dialog native saat index foto aktif berubah
+  useEffect(() => {
+    const el = dialogRef.current;
+    if (!el) return;
+    if (viewerIndex !== null && !el.open) {
+      el.showModal();
+    } else if (viewerIndex === null && el.open) {
+      el.close();
+    }
+  }, [viewerIndex]);
 
   // Reset batas tampilan foto saat berpindah proyek
   if (projectId !== prevProjectId) {
@@ -25,6 +38,7 @@ export default function ProjectGallery({ projectId, photos = [], photoLimit = 12
     setVisibleCount(PAGE_SIZE);
     setFailedFiles([]);
     setStatusMessage('');
+    setViewerIndex(null);
   }
 
   const isTemp = typeof projectId === 'string' && projectId.startsWith('tmp_');
@@ -41,8 +55,8 @@ export default function ProjectGallery({ projectId, photos = [], photoLimit = 12
       const file = queue[i];
       setUploadProgress(`Mengunggah ${i + 1}/${queue.length}: ${file.name}...`);
       try {
-        const compressed = await compressImage(file);
-        await photoService.addPhoto(projectId, compressed.file);
+        const { full, thumb } = await compressWithThumb(file);
+        await photoService.addPhoto(projectId, full.file, '', thumb?.file);
         successCount++;
         onPhotoMutated?.();
       } catch (err) {
@@ -203,6 +217,7 @@ export default function ProjectGallery({ projectId, photos = [], photoLimit = 12
                 disabled={isActionDisabled}
                 onCaptionUpdated={onPhotoMutated}
                 onRequestDelete={(p) => setPhotoToDelete(p)}
+                onPhotoClick={(i) => setViewerIndex(i)}
               />
             ))}
           </div>
@@ -219,6 +234,80 @@ export default function ProjectGallery({ projectId, photos = [], photoLimit = 12
           )}
         </>
       )}
+
+      {/* Dialog penampil foto (native HTML5 dialog) */}
+      <dialog
+        ref={dialogRef}
+        onClose={() => setViewerIndex(null)}
+        onClick={(e) => {
+          const rect = dialogRef.current?.getBoundingClientRect();
+          if (rect && (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom)) {
+            setViewerIndex(null);
+          }
+        }}
+        style={{
+          border: '1px solid var(--border)',
+          borderRadius: '12px',
+          padding: '16px',
+          maxWidth: 'min(90vw, 680px)',
+          width: '100%',
+          backgroundColor: 'var(--surface)',
+          color: 'var(--text)',
+        }}
+      >
+        {viewerIndex !== null && photos[viewerIndex] && (
+          <div className="stack-sm">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span className="count" style={{ fontSize: '0.875rem' }}>
+                {viewerIndex + 1} / {photos.length}
+              </span>
+              <button
+                type="button"
+                className="icon-btn"
+                onClick={() => setViewerIndex(null)}
+                aria-label="Tutup pratinjau foto"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div style={{ width: '100%', aspectRatio: '4/3', overflow: 'hidden', borderRadius: '8px', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <img
+                src={photos[viewerIndex].image_url ?? photos[viewerIndex].thumb_url}
+                alt={photos[viewerIndex].caption || `Foto ${viewerIndex + 1}`}
+                style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+              />
+            </div>
+            {photos[viewerIndex].caption && (
+              <p style={{ margin: '4px 0', fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+                {photos[viewerIndex].caption}
+              </p>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px' }}>
+              <button
+                type="button"
+                className="btn btn--outline"
+                onClick={() => setViewerIndex((prev) => Math.max(0, prev - 1))}
+                disabled={viewerIndex <= 0}
+                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+              >
+                <ChevronLeft size={16} />
+                <span>Sebelumnya</span>
+              </button>
+              <button
+                type="button"
+                className="btn btn--outline"
+                onClick={() => setViewerIndex((prev) => Math.min(photos.length - 1, prev + 1))}
+                disabled={viewerIndex >= photos.length - 1}
+                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+              >
+                <span>Berikutnya</span>
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          </div>
+        )}
+      </dialog>
 
       <ConfirmModal
         isOpen={Boolean(photoToDelete)}
