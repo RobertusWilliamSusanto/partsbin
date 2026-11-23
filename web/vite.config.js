@@ -69,6 +69,23 @@ export default defineConfig({
             },
           },
           {
+            // Thumbnail: CacheFirst untuk berkas thumbnail (_t) di bucket project-images
+            urlPattern: ({ url }) =>
+              url.pathname.includes('/storage/v1/object/public/project-images/') &&
+              /_t\.(webp|jpg|jpeg|png)$/i.test(url.pathname),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'partsbin-thumbs',
+              expiration: {
+                maxEntries: 400,
+                maxAgeSeconds: 30 * 24 * 60 * 60, // 30 hari
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
+          {
             // Gambar: CacheFirst untuk Supabase Storage bucket project-images
             urlPattern: ({ url }) =>
               url.pathname.includes('/storage/v1/object/public/project-images/'),
@@ -76,7 +93,7 @@ export default defineConfig({
             options: {
               cacheName: 'partsbin-images',
               expiration: {
-                maxEntries: 150, // Dinaikkan untuk menampung foto dokumentasi proyek di cache
+                maxEntries: 60, // Kuota cache gambar full diturunkan agar seimbang dengan thumbnail
                 maxAgeSeconds: 30 * 24 * 60 * 60, // 30 hari
               },
               cacheableResponse: {

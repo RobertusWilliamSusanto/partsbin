@@ -2,12 +2,22 @@ import { apiClient } from '../config/api';
 
 // Service API foto dokumentasi proyek terpisah agar tidak membebani initial bundle JS
 export const photoService = {
-  // Unggah satu berkas foto dokumentasi dengan multipart/form-data dan batas waktu 30 detik
-  async addPhoto(projectId, file, caption = '') {
+  // Unggah satu berkas foto dokumentasi beserta thumbnail opsional dengan multipart/form-data
+  async addPhoto(projectId, file, caption = '', thumbFile = null) {
+    let actualCaption = caption;
+    let actualThumb = thumbFile;
+    if (caption instanceof Blob || caption instanceof File) {
+      actualThumb = caption;
+      actualCaption = '';
+    }
+
     const formData = new FormData();
     formData.append('image', file);
-    if (caption) {
-      formData.append('caption', caption);
+    if (actualThumb) {
+      formData.append('thumb', actualThumb);
+    }
+    if (actualCaption) {
+      formData.append('caption', actualCaption);
     }
 
     return await apiClient.post(`/projects/${projectId}/photos`, formData, {

@@ -125,9 +125,9 @@ export default function ProjectDocumentPrint({ project, onReady }) {
         <div className="print-doc__photos-grid">
           {photos.map((p, idx) => (
             <figure key={p.id || idx} className="print-doc__figure">
-              {p.image_url ? (
+              {p.thumb_url || p.image_url ? (
                 <img
-                  src={p.image_url}
+                  src={p.thumb_url ?? p.image_url}
                   alt={p.caption || `Dokumentasi ${idx + 1}`}
                   className="print-doc__photo"
                   loading="eager"
