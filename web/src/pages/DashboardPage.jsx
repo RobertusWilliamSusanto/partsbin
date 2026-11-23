@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { AlertTriangle, RefreshCw, FolderPlus } from 'lucide-react';
+import { AlertTriangle, RefreshCw, FolderPlus, Clock } from 'lucide-react';
 import { useProjects } from '../hooks/useProjects';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { usePagination } from '../hooks/usePagination';
@@ -72,7 +72,7 @@ export default function DashboardPage() {
       {!isOnline && (
         <div className="alert alert--warn" style={{ marginBottom: 16 }} role="status">
           <AlertTriangle size={20} strokeWidth={1.75} aria-hidden="true" />
-          <span>Anda sedang offline. Menampilkan data dari memori cache.</span>
+          <span>Anda sedang offline. Menampilkan data dari penyimpanan lokal perangkat.</span>
         </div>
       )}
 
@@ -144,7 +144,15 @@ export default function DashboardPage() {
                       <div className="project-card__body">
                         <div className="card-head">
                           <h2 className="card-title">{proj.name}</h2>
-                          <StatusChip status={proj.status} />
+                          <div className="row-wrap" style={{ gap: 4 }}>
+                            {String(proj.id).startsWith('tmp_') && (
+                              <span className="chip chip--neutral" title="Perubahan belum tersinkron ke server">
+                                <Clock size={14} aria-hidden="true" />
+                                <span>Menunggu</span>
+                              </span>
+                            )}
+                            <StatusChip status={proj.status} />
+                          </div>
                         </div>
                         <p className="project-desc">{proj.description || 'Tidak ada deskripsi.'}</p>
                         <div className="readiness-row" style={{ marginTop: 'auto' }}>

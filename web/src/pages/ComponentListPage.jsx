@@ -8,7 +8,6 @@ import {
 } from 'lucide-react';
 import { useComponents, updateComponentInCache } from '../hooks/useComponents';
 import { invalidateProjectsCache } from '../hooks/useProjects';
-import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { usePagination } from '../hooks/usePagination';
 import componentService from '../services/componentService';
 import FilterBar from '../components/FilterBar';
@@ -23,7 +22,6 @@ const CATEGORY_PILLS = ['ALL', 'MCU', 'Sensor', 'Passive', 'Power', 'Actuator', 
 
 export default function ComponentListPage() {
   const { components, setComponents, loading, error, refetch } = useComponents();
-  const isOnline = useOnlineStatus();
 
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('ALL');
@@ -55,10 +53,6 @@ export default function ComponentListPage() {
   );
 
   const handleStepStock = async (comp, delta) => {
-    if (!isOnline) {
-      setToastError('Aksi ubah stok dinonaktifkan saat mode offline.');
-      return;
-    }
     const nextStock = comp.stock + delta;
     if (nextStock < 0) return;
 
@@ -88,7 +82,6 @@ export default function ComponentListPage() {
             type="button"
             className={`btn btn--sm ${isFormOpen ? 'btn--outline' : 'btn--primary'}`}
             onClick={() => setIsFormOpen((prev) => !prev)}
-            disabled={!isOnline}
           >
             {isFormOpen ? <X size={20} strokeWidth={1.75} aria-hidden="true" /> : <Plus size={20} strokeWidth={1.75} aria-hidden="true" />}
             <span>{isFormOpen ? 'Tutup Form' : 'Tambah'}</span>
@@ -156,7 +149,6 @@ export default function ComponentListPage() {
                   <ComponentCardItem
                     key={comp.id}
                     comp={comp}
-                    isOnline={isOnline}
                     isBusy={updatingId === comp.id}
                     onStepStock={handleStepStock}
                   />

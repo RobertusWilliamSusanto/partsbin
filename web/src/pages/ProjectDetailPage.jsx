@@ -1,9 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Pencil, Trash2, Plus, AlertTriangle, X } from 'lucide-react';
 import { useProject, invalidateProjectsCache } from '../hooks/useProjects';
 import { useComponents, invalidateComponentsCache } from '../hooks/useComponents';
-import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import projectService from '../services/projectService';
 import ConfirmModal from '../components/modals/ConfirmModal';
 import ProjectCover from '../components/ProjectCover';
@@ -16,7 +15,6 @@ export default function ProjectDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const isOnline = useOnlineStatus();
   const { project, setProject, loading, error, refetch, updateStatus } = useProject(id);
   const { components } = useComponents();
 
@@ -33,12 +31,27 @@ export default function ProjectDetailPage() {
   const [addingItem, setAddingItem] = useState(false);
   const [toastError, setToastError] = useState(() => location.state?.warning || null);
 
+  // Alihkan URL sementara ke URL riil saat proyek offline selesai disinkronkan ke server
+  useEffect(() => {
+    if (!id || !id.startsWith('tmp_')) return;
+    let active = true;
+    const checkMapping = async () => {
+      const { getItem } = await import('../offline/db');
+      const mapped = await getItem('idmap', id);
+      if (active && mapped?.realId) {
+        navigate(`/projects/${mapped.realId}`, { replace: true });
+      }
+    };
+    checkMapping();
+    window.addEventListener('partsbin:sync-event', checkMapping);
+    return () => {
+      active = false;
+      window.removeEventListener('partsbin:sync-event', checkMapping);
+    };
+  }, [id, navigate]);
+
   const handleStatusChange = async (newStatus) => {
     if (!project || updatingStatus || project.status === newStatus) return;
-    if (!isOnline) {
-      setToastError('Aksi ubah status dinonaktifkan saat mode offline.');
-      return;
-    }
     setUpdatingStatus(true);
     setToastError(null);
     try {
@@ -54,10 +67,6 @@ export default function ProjectDetailPage() {
   const handleSaveEdit = async (e) => {
     e.preventDefault();
     if (!project) return;
-    if (!isOnline) {
-      setToastError('Aksi edit proyek dinonaktifkan saat mode offline.');
-      return;
-    }
     const trimmed = editName.trim();
     if (!trimmed) return setToastError('Nama proyek wajib diisi.');
     setSavingEdit(true);
@@ -75,10 +84,6 @@ export default function ProjectDetailPage() {
 
   const handleDeleteProject = async () => {
     if (!project) return;
-    if (!isOnline) {
-      setToastError('Aksi hapus proyek dinonaktifkan saat mode offline.');
-      return;
-    }
     setDeleting(true);
     try {
       await projectService.remove(project.id);
@@ -95,10 +100,6 @@ export default function ProjectDetailPage() {
 
   const handleDeleteItem = async () => {
     if (!project || !itemToDelete) return;
-    if (!isOnline) {
-      setToastError('Aksi hapus item BOM dinonaktifkan saat mode offline.');
-      return;
-    }
     setDeleting(true);
     try {
       await projectService.removeItem(project.id, itemToDelete.id);
@@ -116,10 +117,6 @@ export default function ProjectDetailPage() {
   const handleAddItem = async (e) => {
     e.preventDefault();
     if (!project || !selectedCompId) return;
-    if (!isOnline) {
-      setToastError('Aksi tambah item BOM dinonaktifkan saat mode offline.');
-      return;
-    }
     setAddingItem(true);
     try {
       await projectService.addItem(project.id, { component_id: selectedCompId, quantity_needed: Number(qtyNeeded) || 1 });
@@ -159,7 +156,7 @@ export default function ProjectDetailPage() {
             <input type="text" className="form-input" value={editName} onChange={(e) => setEditName(e.target.value)} required />
             <textarea className="form-textarea" rows={3} value={editDesc} onChange={(e) => setEditDesc(e.target.value)} placeholder="Deskripsi..." />
             <div className="row-wrap">
-              <button type="submit" className="btn btn--primary" style={{ flex: 1 }} disabled={savingEdit || !isOnline}><span>Simpan</span></button>
+              <button type="submit" className="btn btn--primary" style={{ flex: 1 }} disabled={savingEdit}><span>Simpan</span></button>
               <button type="button" className="btn btn--outline" style={{ flex: 1 }} onClick={() => setIsEditing(false)}><span>Batal</span></button>
             </div>
           </form>
@@ -167,16 +164,16 @@ export default function ProjectDetailPage() {
           <>
             <div><h1 className="display">{project.name}</h1>{project.description && <p className="lede">{project.description}</p>}</div>
             <div className="row-wrap">
-              <button type="button" className="btn btn--outline" style={{ flex: 1 }} onClick={() => { setEditName(project.name); setEditDesc(project.description || ''); setIsEditing(true); }} disabled={!isOnline}><Pencil size={18} /><span>Edit Info</span></button>
-              <button type="button" className="btn btn--danger" style={{ flex: 1 }} onClick={() => setIsDeleteProjOpen(true)} disabled={!isOnline}><Trash2 size={18} /><span>Hapus</span></button>
+              <button type="button" className="btn btn--outline" style={{ flex: 1 }} onClick={() => { setEditName(project.name); setEditDesc(project.description || ''); setIsEditing(true); }}><Pencil size={18} /><span>Edit Info</span></button>
+              <button type="button" className="btn btn--danger" style={{ flex: 1 }} onClick={() => setIsDeleteProjOpen(true)}><Trash2 size={18} /><span>Hapus</span></button>
             </div>
           </>
         )}
-        <ProjectStatusChanger currentStatus={project.status} onStatusChange={handleStatusChange} disabled={!isOnline || updatingStatus} />
+        <ProjectStatusChanger currentStatus={project.status} onStatusChange={handleStatusChange} disabled={updatingStatus} />
       </div>
 
       <ProjectReadinessCard summary={summary} />
-      <ProjectBomList items={items} isOnline={isOnline} onRequestDelete={(it) => setItemToDelete(it)} />
+      <ProjectBomList items={items} onRequestDelete={(it) => setItemToDelete(it)} />
 
       <div className="card stack-md">
         <h2 className="card-title">Tambah Komponen ke BOM</h2>
@@ -186,7 +183,7 @@ export default function ProjectDetailPage() {
             {components.map((c) => <option key={c.id} value={c.id}>{c.name} [{c.bin_location}] (Stok: {c.stock})</option>)}
           </select>
           <input type="number" min="1" step="1" className="form-input num" value={qtyNeeded} onChange={(e) => setQtyNeeded(e.target.value)} placeholder="Jumlah dibutuhkan" required />
-          <button type="submit" className="btn btn--primary" disabled={addingItem || !isOnline || !selectedCompId}><Plus size={18} /><span>{addingItem ? 'Menambahkan...' : 'Tambahkan ke BOM'}</span></button>
+          <button type="submit" className="btn btn--primary" disabled={addingItem || !selectedCompId}><Plus size={18} /><span>{addingItem ? 'Menambahkan...' : 'Tambahkan ke BOM'}</span></button>
         </form>
       </div>
 

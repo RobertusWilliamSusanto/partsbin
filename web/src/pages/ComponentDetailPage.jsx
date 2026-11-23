@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { AlertTriangle, RefreshCw, X } from 'lucide-react';
 import {
@@ -7,7 +7,6 @@ import {
   updateComponentInCache,
 } from '../hooks/useComponents';
 import { invalidateProjectsCache } from '../hooks/useProjects';
-import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import componentService from '../services/componentService';
 import ConfirmModal from '../components/modals/ConfirmModal';
 import ComponentInlineForm from '../components/ComponentInlineForm';
@@ -17,7 +16,6 @@ import ComponentUsedProjects from '../components/ComponentUsedProjects';
 export default function ComponentDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const isOnline = useOnlineStatus();
   const { component, setComponent, loading, error, refetch } = useComponent(id);
 
   const [isEditing, setIsEditing] = useState(false);
@@ -26,12 +24,27 @@ export default function ComponentDetailPage() {
   const [updatingStock, setUpdatingStock] = useState(false);
   const [toastError, setToastError] = useState(null);
 
+  // Alihkan URL sementara ke URL riil saat komponen offline selesai disinkronkan ke server
+  useEffect(() => {
+    if (!id || !id.startsWith('tmp_')) return;
+    let active = true;
+    const checkMapping = async () => {
+      const { getItem } = await import('../offline/db');
+      const mapped = await getItem('idmap', id);
+      if (active && mapped?.realId) {
+        navigate(`/components/${mapped.realId}`, { replace: true });
+      }
+    };
+    checkMapping();
+    window.addEventListener('partsbin:sync-event', checkMapping);
+    return () => {
+      active = false;
+      window.removeEventListener('partsbin:sync-event', checkMapping);
+    };
+  }, [id, navigate]);
+
   const handleStepStock = async (delta) => {
     if (!component) return;
-    if (!isOnline) {
-      setToastError('Aksi ubah stok dinonaktifkan saat mode offline.');
-      return;
-    }
     const nextStock = component.stock + delta;
     if (nextStock < 0) return;
 
@@ -51,10 +64,6 @@ export default function ComponentDetailPage() {
 
   const handleConfirmDelete = async () => {
     if (!component) return;
-    if (!isOnline) {
-      setToastError('Aksi hapus komponen dinonaktifkan saat mode offline.');
-      return;
-    }
     setDeleting(true);
     setToastError(null);
     try {
@@ -124,7 +133,6 @@ export default function ComponentDetailPage() {
           ) : (
             <ComponentSpecCard
               component={component}
-              isOnline={isOnline}
               updatingStock={updatingStock}
               onStepStock={handleStepStock}
               onEdit={() => setIsEditing(true)}

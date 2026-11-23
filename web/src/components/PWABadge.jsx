@@ -1,6 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { WifiOff, Download } from 'lucide-react';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
+
+// Memuat panel antrean & op gagal secara lazy agar bundle awal tetap ringan
+const OfflinePanel = lazy(() => import('./OfflinePanel'));
 
 // Deteksi apakah aplikasi dibuka dalam mode standalone PWA
 function getIsStandalone() {
@@ -14,13 +17,68 @@ function getIsStandalone() {
 export default function PWABadge() {
   const isOnline = useOnlineStatus();
   const [isStandalone, setIsStandalone] = useState(getIsStandalone);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [failedOps, setFailedOps] = useState([]);
+  const [expiredOps, setExpiredOps] = useState([]);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [installPrompt, setInstallPrompt] = useState(() => {
     if (getIsStandalone()) return null;
     return typeof window !== 'undefined' ? window.__pwaPrompt || null : null;
   });
 
+  // Memuat status outbox secara asinkron tanpa memblokir initial render
+  const refreshOutboxStatus = useCallback(async () => {
+    try {
+      const { getAll } = await import('../offline/db');
+      const allOps = await getAll('outbox');
+      const now = Date.now();
+      const expired = allOps.filter(
+        (op) => op.status === 'pending' && now - new Date(op.createdAt).getTime() > 30 * 24 * 60 * 60 * 1000 && !op.userConfirmed
+      );
+      const pending = allOps.filter(
+        (op) => op.status === 'pending' && (now - new Date(op.createdAt).getTime() <= 30 * 24 * 60 * 60 * 1000 || op.userConfirmed)
+      );
+      const failed = allOps.filter((op) => op.status === 'failed');
+      setPendingCount(pending.length);
+      setFailedOps(failed);
+      setExpiredOps(expired);
+    } catch {
+      // Abaikan bila IndexedDB belum tersedia
+    }
+  }, []);
+
   useEffect(() => {
-    // Abaikan registrasi listener bila aplikasi sudah berjalan dalam mode standalone
+    let active = true;
+    import('../offline/db')
+      .then(({ getAll }) => getAll('outbox'))
+      .then((allOps) => {
+        if (!active) return;
+        const now = Date.now();
+        const expired = allOps.filter(
+          (op) => op.status === 'pending' && now - new Date(op.createdAt).getTime() > 30 * 24 * 60 * 60 * 1000 && !op.userConfirmed
+        );
+        const pending = allOps.filter(
+          (op) => op.status === 'pending' && (now - new Date(op.createdAt).getTime() <= 30 * 24 * 60 * 60 * 1000 || op.userConfirmed)
+        );
+        const failed = allOps.filter((op) => op.status === 'failed');
+        setPendingCount(pending.length);
+        setFailedOps(failed);
+        setExpiredOps(expired);
+      })
+      .catch(() => {});
+
+    const handleSyncEvent = () => refreshOutboxStatus();
+    window.addEventListener('partsbin:sync-event', handleSyncEvent);
+    window.addEventListener('online', handleSyncEvent);
+
+    return () => {
+      active = false;
+      window.removeEventListener('partsbin:sync-event', handleSyncEvent);
+      window.removeEventListener('online', handleSyncEvent);
+    };
+  }, [refreshOutboxStatus]);
+
+  useEffect(() => {
     if (getIsStandalone()) return;
 
     const handleBeforeInstall = (e) => {
@@ -60,9 +118,46 @@ export default function PWABadge() {
     setInstallPrompt(null);
   };
 
-  const showInstall = Boolean(installPrompt) && !isStandalone;
+  const handleSyncNow = async () => {
+    setIsSyncing(true);
+    try {
+      const { flushOutbox } = await import('../offline/syncEngine');
+      await flushOutbox();
+    } finally {
+      setIsSyncing(false);
+      refreshOutboxStatus();
+    }
+  };
 
-  if (isOnline && !showInstall) return null;
+  const handleRetry = async (opId) => {
+    const { retryOp } = await import('../offline/outbox');
+    const { flushOutbox } = await import('../offline/syncEngine');
+    await retryOp(opId);
+    await refreshOutboxStatus();
+    flushOutbox();
+  };
+
+  const handleDiscard = async (opId) => {
+    const { discardOp } = await import('../offline/outbox');
+    const { broadcastSyncEvent } = await import('../offline/syncEngine');
+    await discardOp(opId);
+    await refreshOutboxStatus();
+    broadcastSyncEvent('data_discarded');
+  };
+
+  const handleConfirmExpired = async (opId) => {
+    const { confirmExpiredOp } = await import('../offline/outbox');
+    const { flushOutbox } = await import('../offline/syncEngine');
+    await confirmExpiredOp(opId);
+    await refreshOutboxStatus();
+    flushOutbox();
+  };
+
+  const showInstall = Boolean(installPrompt) && !isStandalone;
+  const hasOps = pendingCount > 0 || failedOps.length > 0 || expiredOps.length > 0;
+  const showBadge = !isOnline || hasOps || showInstall;
+
+  if (!showBadge) return null;
 
   return (
     <div className="pwa-badge">
@@ -71,9 +166,25 @@ export default function PWABadge() {
           <div className="pwa-badge__box pwa-badge__box--offline glass" role="status">
             <div className="pwa-badge__text">
               <WifiOff size={20} strokeWidth={1.75} aria-hidden="true" />
-              <span>Mode Offline — Data dari cache (aksi tulis dinonaktifkan)</span>
+              <span>Mode Offline — Perubahan disimpan di perangkat dan otomatis disinkronkan saat online.</span>
             </div>
           </div>
+        )}
+
+        {hasOps && (
+          <Suspense fallback={null}>
+            <OfflinePanel
+              pendingCount={pendingCount}
+              failedOps={failedOps}
+              expiredOps={expiredOps}
+              isOnline={isOnline}
+              isSyncing={isSyncing}
+              onSyncNow={handleSyncNow}
+              onRetry={handleRetry}
+              onDiscard={handleDiscard}
+              onConfirmExpired={handleConfirmExpired}
+            />
+          </Suspense>
         )}
 
         {showInstall && (

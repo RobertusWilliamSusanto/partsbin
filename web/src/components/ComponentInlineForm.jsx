@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Save, RotateCcw, Trash2, AlertCircle, X } from 'lucide-react';
 import componentService from '../services/componentService';
-import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { invalidateComponentsCache, updateComponentInCache } from '../hooks/useComponents';
 import { invalidateProjectsCache } from '../hooks/useProjects';
 import {
@@ -38,7 +37,6 @@ function toFormState(initialData) {
 // Form inline terintegrasi (tanpa pop-up modal) untuk Tambah Komponen & Edit in-place
 export default function ComponentInlineForm({ initialData = null, onCancel, onSaved }) {
   const isEdit = Boolean(initialData?.id);
-  const isOnline = useOnlineStatus();
 
   const [form, setForm] = useState(() => toFormState(initialData));
   const [savedDraft, setSavedDraft] = useState(() => (isEdit ? null : loadComponentDraft()));
@@ -81,10 +79,6 @@ export default function ComponentInlineForm({ initialData = null, onCancel, onSa
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!isOnline) {
-      setError('Aksi ini memerlukan koneksi internet. Anda sedang offline.');
-      return;
-    }
     setError(null);
 
     const payload = {
@@ -186,7 +180,7 @@ export default function ComponentInlineForm({ initialData = null, onCancel, onSa
           <button
             type="submit"
             className="btn btn--primary"
-            disabled={submitting || !isOnline}
+            disabled={submitting}
           >
             <Save size={20} strokeWidth={1.75} aria-hidden="true" />
             <span>{submitting ? 'Menyimpan...' : isEdit ? 'Simpan Perubahan' : 'Simpan Komponen'}</span>

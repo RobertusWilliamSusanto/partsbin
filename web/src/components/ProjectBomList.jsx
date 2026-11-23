@@ -3,7 +3,7 @@ import { Trash2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { formatRupiah } from '../utils/format';
 
 // Subkomponen penampil daftar item Bill of Materials (BOM) pada halaman detail proyek
-export default function ProjectBomList({ items = [], isOnline, onRequestDelete }) {
+export default function ProjectBomList({ items = [], onRequestDelete }) {
   return (
     <div>
       <div className="list-head">
@@ -26,7 +26,6 @@ export default function ProjectBomList({ items = [], isOnline, onRequestDelete }
                   type="button"
                   className="icon-btn"
                   onClick={() => onRequestDelete(it)}
-                  disabled={!isOnline}
                   aria-label={`Hapus ${it.component_name} dari BOM`}
                 >
                   <Trash2 size={18} />

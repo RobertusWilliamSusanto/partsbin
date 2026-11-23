@@ -46,10 +46,21 @@ export function useProjects() {
         if (active) setLoading(false);
       });
 
+    // Dengarkan event sinkronisasi lintas-tab dan sinkronisasi latar belakang
+    const handleSync = () => {
+      refetch({ silent: true });
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('partsbin:sync-event', handleSync);
+    }
+
     return () => {
       active = false;
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('partsbin:sync-event', handleSync);
+      }
     };
-  }, [reloadKey]);
+  }, [reloadKey, refetch]);
 
   const updateStatus = useCallback(
     async (id, status) => {
@@ -114,10 +125,21 @@ export function useProject(id) {
         if (active) setLoading(false);
       });
 
+    // Dengarkan event sinkronisasi lintas-tab untuk menyegarkan detail proyek
+    const handleSync = () => {
+      refetch({ silent: true });
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('partsbin:sync-event', handleSync);
+    }
+
     return () => {
       active = false;
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('partsbin:sync-event', handleSync);
+      }
     };
-  }, [id, reloadKey]);
+  }, [id, reloadKey, refetch]);
 
   const activeProject = project?.id === id ? project : cached;
   const isInitialLoading = loading && !activeProject;
