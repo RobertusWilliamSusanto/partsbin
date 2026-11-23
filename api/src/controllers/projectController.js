@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { supabase } from '../config/supabaseClient.js';
 import { projectModel, getImageUrl } from '../models/projectModel.js';
 import { projectItemModel } from '../models/projectItemModel.js';
+import { projectPhotoModel } from '../models/projectPhotoModel.js';
 import { detectImageFormatFromBuffer } from '../middlewares/upload.js';
 
 const ALLOWED_STATUS = new Set(['planned', 'in_progress', 'done']);
@@ -119,7 +120,17 @@ export const projectController = {
     try {
       const { project_items: rawItems, ...rest } = await projectModel.getById(req.params.id);
       const { items, summary } = calculateBomAnalytics(rawItems || []);
-      return res.status(200).json({ data: { ...rest, items, summary } });
+
+      // Ambil foto dokumentasi via query terpisah agar kegagalan/ketiadaan tabel foto tidak mematikan detail proyek
+      let photos = [];
+      try {
+        photos = await projectPhotoModel.getByProjectId(req.params.id);
+      } catch (photoErr) {
+        console.warn('[PROJECT_PHOTOS_WARN] Gagal mengambil foto proyek:', photoErr?.message || photoErr);
+        photos = [];
+      }
+
+      return res.status(200).json({ data: { ...rest, items, summary, photos } });
     } catch (err) {
       return next(err);
     }
@@ -359,6 +370,130 @@ export const projectController = {
       const deleted = await projectItemModel.removeItem(req.params.id, req.params.itemId);
       return res.status(200).json({
         message: 'Item BOM berhasil dihapus dari proyek.',
+        data: deleted,
+      });
+    } catch (err) {
+      return next(err);
+    }
+  },
+
+  // Endpoint #17: Unggah foto dokumentasi proyek baru (multipart/form-data)
+  async addPhoto(req, res, next) {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Berkas gambar wajib diunggah pada field image.' });
+    }
+
+    if (req.file.size === 0 || req.file.buffer.length === 0) {
+      return res.status(400).json({ error: 'Berkas gambar tidak boleh kosong (0 byte).' });
+    }
+
+    const detected = detectImageFormatFromBuffer(req.file.buffer);
+    if (!detected) {
+      return res.status(400).json({
+        error: 'Konten berkas bukan gambar JPEG, PNG, atau WebP yang valid (magic bytes tidak cocok).',
+      });
+    }
+
+    const body = req.body ?? {};
+    if (body.caption !== undefined && typeof body.caption !== 'string') {
+      return res.status(400).json({ error: 'Caption foto harus berupa teks.' });
+    }
+    const caption = typeof body.caption === 'string' ? body.caption.trim() : '';
+    if (caption.length > 200) {
+      return res.status(400).json({ error: 'Panjang caption maksimal 200 karakter.' });
+    }
+
+    try {
+      // 1. Verifikasi keberadaan proyek di database
+      const { data: project, error: projError } = await supabase
+        .from('projects')
+        .select('id')
+        .eq('id', req.params.id)
+        .single();
+
+      if (projError || !project) {
+        return res.status(404).json({ error: 'Proyek tidak ditemukan.' });
+      }
+
+      // Verifikasi batas maksimal 12 foto per proyek
+      const photoCount = await projectPhotoModel.countByProjectId(req.params.id);
+      if (photoCount >= 12) {
+        return res.status(400).json({ error: 'Jumlah foto telah mencapai batas maksimal 12 foto per proyek.' });
+      }
+
+      // 2. Unggah berkas ke Supabase Storage bucket 'project-images'
+      const newFileName = `projects/${project.id}/docs/${crypto.randomUUID()}.${detected.ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from('project-images')
+        .upload(newFileName, req.file.buffer, {
+          contentType: detected.mime,
+          upsert: false,
+        });
+
+      if (uploadError) throw uploadError;
+
+      // 3. Simpan record metadata ke database dengan compensating rollback jika insert gagal
+      let createdPhoto;
+      try {
+        createdPhoto = await projectPhotoModel.create({
+          project_id: project.id,
+          image_path: newFileName,
+          caption,
+        });
+      } catch (dbError) {
+        await supabase.storage
+          .from('project-images')
+          .remove([newFileName])
+          .catch((cleanErr) => console.warn('[STORAGE_ROLLBACK_WARN] Gagal rollback foto docs:', cleanErr));
+        throw dbError;
+      }
+
+      return res.status(201).json({
+        message: 'Foto dokumentasi proyek berhasil ditambahkan.',
+        data: createdPhoto,
+      });
+    } catch (err) {
+      return next(err);
+    }
+  },
+
+  // Endpoint #18: Perbarui teks caption foto dokumentasi
+  async updatePhotoCaption(req, res, next) {
+    const body = req.body ?? {};
+    if (body.caption === undefined || typeof body.caption !== 'string') {
+      return res.status(400).json({ error: 'Caption foto wajib berupa teks.' });
+    }
+
+    const caption = body.caption.trim();
+    if (caption.length > 200) {
+      return res.status(400).json({ error: 'Panjang caption maksimal 200 karakter.' });
+    }
+
+    try {
+      const updated = await projectPhotoModel.updateCaption(req.params.id, req.params.photoId, caption);
+      if (!updated) {
+        return res.status(404).json({ error: 'Foto tidak ditemukan pada proyek ini.' });
+      }
+
+      return res.status(200).json({
+        message: 'Caption foto dokumentasi berhasil diperbarui.',
+        data: updated,
+      });
+    } catch (err) {
+      return next(err);
+    }
+  },
+
+  // Endpoint #19: Hapus foto dokumentasi proyek beserta berkas di Storage
+  async removePhoto(req, res, next) {
+    try {
+      const deleted = await projectPhotoModel.remove(req.params.id, req.params.photoId);
+      if (!deleted) {
+        return res.status(404).json({ error: 'Foto tidak ditemukan pada proyek ini.' });
+      }
+
+      return res.status(200).json({
+        message: 'Foto dokumentasi berhasil dihapus.',
         data: deleted,
       });
     } catch (err) {

@@ -5,9 +5,10 @@ import { validateUuidParam } from '../middlewares/validateUuid.js';
 
 const router = Router();
 
-// Validasi format UUID untuk seluruh parameter :id dan :itemId sebelum masuk ke controller
+// Validasi format UUID untuk seluruh parameter :id, :itemId, dan :photoId sebelum masuk ke controller
 router.param('id', validateUuidParam);
 router.param('itemId', validateUuidParam);
+router.param('photoId', validateUuidParam);
 
 // Endpoint utama CRUD proyek
 router.get('/', projectController.getAll);
@@ -34,5 +35,14 @@ router.post(
 // Endpoint relasi item BOM pada proyek tertentu
 router.post('/:id/items', projectController.addItem);
 router.delete('/:id/items/:itemId', projectController.removeItem);
+
+// Endpoint #17: Unggah foto dokumentasi proyek ke galeri (multipart/form-data)
+router.post('/:id/photos', uploadProjectImage, projectController.addPhoto);
+
+// Endpoint #18: Perbarui teks caption foto dokumentasi
+router.patch('/:id/photos/:photoId', projectController.updatePhotoCaption);
+
+// Endpoint #19: Hapus foto dokumentasi proyek beserta berkas di Storage
+router.delete('/:id/photos/:photoId', projectController.removePhoto);
 
 export default router;
