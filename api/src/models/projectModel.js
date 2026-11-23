@@ -1,4 +1,5 @@
 import { supabase } from '../config/supabaseClient.js';
+import { projectPhotoModel } from './projectPhotoModel.js';
 
 const PROJECT_WITH_BOM_SELECT = `
   *,
@@ -118,6 +119,14 @@ export const projectModel = {
   },
 
   async remove(id) {
+    // Kumpulkan path semua berkas foto dokumentasi proyek sebelum record proyek terhapus cascade
+    let photoPaths = [];
+    try {
+      photoPaths = await projectPhotoModel.getAllImagePaths(id);
+    } catch (photoErr) {
+      console.warn('[STORAGE_DELETE_WARN] Gagal membaca list foto sebelum proyek dihapus:', photoErr);
+    }
+
     const { data, error } = await supabase
       .from('projects')
       .delete()
@@ -137,6 +146,16 @@ export const projectModel = {
         .remove([deleted.image_path])
         .catch((err) => {
           console.warn('[STORAGE_DELETE_WARN] Gagal menghapus berkas di storage:', deleted.image_path, err);
+        });
+    }
+
+    // Best-effort hapus seluruh berkas foto dokumentasi proyek di storage jika ada
+    if (photoPaths.length > 0) {
+      supabase.storage
+        .from('project-images')
+        .remove(photoPaths)
+        .catch((err) => {
+          console.warn('[STORAGE_DELETE_WARN] Gagal menghapus foto dokumentasi di storage:', err);
         });
     }
 
