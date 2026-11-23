@@ -1,8 +1,13 @@
 import { Router } from 'express';
 import { projectController } from '../controllers/projectController.js';
 import { uploadProjectImage } from '../middlewares/upload.js';
+import { validateUuidParam } from '../middlewares/validateUuid.js';
 
 const router = Router();
+
+// Validasi format UUID untuk seluruh parameter :id dan :itemId sebelum masuk ke controller
+router.param('id', validateUuidParam);
+router.param('itemId', validateUuidParam);
 
 // Endpoint utama CRUD proyek
 router.get('/', projectController.getAll);

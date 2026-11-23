@@ -9,7 +9,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'robots.txt', 'icon-192.png', 'icon-512.png'],
+      includeAssets: ['icon-192.png', 'icon-512.png'],
       manifest: {
         name: 'PartsBin — Katalog Komponen & Kalkulator BOM',
         short_name: 'PartsBin',
@@ -55,9 +55,14 @@ export default defineConfig({
             // Berfungsi lintas-origin (frontend & backend beda subdomain Vercel)
             urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
             handler: 'NetworkFirst',
+            method: 'GET',
             options: {
               cacheName: 'partsbin-api-cache',
               networkTimeoutSeconds: 5,
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 7 * 24 * 60 * 60, // 7 hari
+              },
               cacheableResponse: {
                 statuses: [0, 200],
               },
