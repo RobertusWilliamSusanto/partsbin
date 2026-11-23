@@ -8,6 +8,16 @@ import { errorHandler } from './middlewares/errorHandler.js';
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 
+// Sembunyikan header X-Powered-By bawaan Express agar tidak membocorkan teknologi backend
+app.disable('x-powered-by');
+
+// Header keamanan dasar HTTP tanpa dependensi eksternal
+app.use((_req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  next();
+});
+
 // Daftar origin frontend yang diizinkan mengakses API (mendukung CORS_ORIGIN, CORS_ORIGINS, atau FRONTEND_URL, tanpa wildcard *)
 const envOrigins =
   process.env.CORS_ORIGIN ||
