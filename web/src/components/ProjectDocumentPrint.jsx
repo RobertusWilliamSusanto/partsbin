@@ -13,6 +13,11 @@ const STATUS_LABELS = {
 // Komponen dokumen cetak A4 yang dirender saat printing=true untuk dicetak via window.print()
 export default function ProjectDocumentPrint({ project, onReady }) {
   const docRef = useRef(null);
+  const onReadyRef = useRef(onReady);
+
+  useEffect(() => {
+    onReadyRef.current = onReady;
+  });
 
   // Hitung ulang analitik BOM secara deterministik dari satu sumber rumus utils/bom.js
   const bomResult = calcBom(project?.items || []);
@@ -30,19 +35,38 @@ export default function ProjectDocumentPrint({ project, onReady }) {
 
   // Tunggu semua <img> di dokumen cetak selesai dimuat (atau gagal) dengan batas waktu 15 detik
   useEffect(() => {
-    if (!docRef.current) return;
+    if (!docRef.current) return undefined;
     const images = Array.from(docRef.current.querySelectorAll('img'));
-    if (images.length === 0) { onReady?.(); return; }
-
     let isMounted = true;
+    let isFired = false;
+
+    const fireReady = () => {
+      if (!isFired && isMounted) {
+        isFired = true;
+        onReadyRef.current?.();
+      }
+    };
+
+    if (images.length === 0) {
+      fireReady();
+      return undefined;
+    }
+
     const promises = images.map((img) => new Promise((resolve) => {
       if (img.complete) { resolve(); } else { img.onload = () => resolve(); img.onerror = () => resolve(); }
     }));
 
-    const timer = setTimeout(() => { if (isMounted) onReady?.(); }, 15000);
-    Promise.all(promises).then(() => { clearTimeout(timer); if (isMounted) onReady?.(); });
-    return () => { isMounted = false; clearTimeout(timer); };
-  }, [onReady]);
+    const timer = setTimeout(fireReady, 15000);
+    Promise.all(promises).then(() => {
+      clearTimeout(timer);
+      fireReady();
+    });
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+    };
+  }, []);
 
   if (!project) return null;
 

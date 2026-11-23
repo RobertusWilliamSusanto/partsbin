@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from 'react';
+import { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import { Link, useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Pencil, Trash2, Plus, AlertTriangle, X, FileDown } from 'lucide-react';
 import { useProject, invalidateProjectsCache } from '../hooks/useProjects';
@@ -39,31 +39,47 @@ export default function ProjectDetailPage() {
   const [printing, setPrinting] = useState(false);
   const [printPreparing, setPrintPreparing] = useState(false);
 
+  const isPrintingRef = useRef(false);
+
   // Alur cetak PDF: render komponen cetak -> tunggu gambar siap -> window.print() -> pulihkan judul
   const handleDownloadPdf = () => {
-    if (printing || !project) return;
+    if (isPrintingRef.current || printing || !project) return;
+    isPrintingRef.current = true;
     setPrintPreparing(true);
     setPrinting(true);
   };
 
-  const handlePrintReady = () => {
+  const printTriggeredRef = useRef(false);
+
+  const handlePrintReady = useCallback(() => {
+    if (printTriggeredRef.current) return;
+    printTriggeredRef.current = true;
     setPrintPreparing(false);
     const originalTitle = document.title;
     const dateStr = new Date().toISOString().split('T')[0];
     const safeName = (project?.name || 'Proyek').replace(/[/\\?%*:|"<>]/g, '-');
     document.title = `PartsBin - ${safeName} - ${dateStr}`;
 
-    const handleAfterPrint = () => {
+    let cleanedUp = false;
+    const cleanup = () => {
+      if (cleanedUp) return;
+      cleanedUp = true;
       document.title = originalTitle;
+      isPrintingRef.current = false;
+      printTriggeredRef.current = false;
       setPrinting(false);
-      window.removeEventListener('afterprint', handleAfterPrint);
+      window.removeEventListener('afterprint', cleanup);
+      window.removeEventListener('focus', cleanup);
     };
-    window.addEventListener('afterprint', handleAfterPrint);
+
+    window.addEventListener('afterprint', cleanup);
+    // Fallback pulihkan judul & tombol bila browser mobile tidak memicu afterprint
+    window.addEventListener('focus', cleanup, { once: true });
 
     setTimeout(() => {
       window.print();
     }, 100);
-  };
+  }, [project]);
 
   // Alihkan URL sementara ke URL riil saat proyek offline selesai disinkronkan ke server
   useEffect(() => {
