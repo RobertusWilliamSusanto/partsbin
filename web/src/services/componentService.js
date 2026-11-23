@@ -1,4 +1,5 @@
 import { apiClient } from '../config/api';
+import { withTimeout } from '../utils/safeOffline';
 
 // Deteksi apakah kesalahan terjadi akibat putusnya koneksi jaringan atau mode offline
 function isNetworkError(err) {
@@ -10,48 +11,67 @@ function isNetworkError(err) {
 // Service singleton komponen dengan dukungan offline-first (IndexedDB + Outbox)
 class ComponentService {
   async getAll() {
+    let res;
     try {
-      const res = await apiClient.get('/components');
-      const list = Array.isArray(res?.data) ? res.data : [];
-      // Terapkan overlay perubahan lokal tertunda tanpa memblokir bundle awal lewat import dinamis
-      const { overlayComponents } = await import('../offline/offlineService');
-      const merged = await overlayComponents(list);
-      return { ...res, data: merged };
+      res = await apiClient.get('/components');
     } catch (err) {
       if (isNetworkError(err)) {
-        const { getAll } = await import('../offline/db');
-        const list = await getAll('components');
-        return { data: list };
+        try {
+          const list = await withTimeout(import('../offline/db').then((m) => m.getAll('components')));
+          return { data: list };
+        } catch {
+          // Teruskan error jaringan asli bila pembacaan cadangan offline gagal
+          throw err;
+        }
       }
       throw err;
+    }
+
+    const list = Array.isArray(res?.data) ? res.data : [];
+    try {
+      const merged = await withTimeout(import('../offline/offlineService').then((m) => m.overlayComponents(list)));
+      return { ...res, data: merged };
+    } catch (offlineErr) {
+      // Jalur fail-open: kembalikan data API langsung bila overlay offline gagal atau timeout
+      console.warn('Fail-open offline components:', offlineErr?.message || offlineErr);
+      return res;
     }
   }
 
   async getById(id) {
     // Guard: jangan pernah mengirim ID sementara (tmp_*) ke API server
     if (String(id).startsWith('tmp_')) {
-      const { getItem } = await import('../offline/db');
-      const mapped = await getItem('idmap', id);
-      if (mapped?.realId) return this.getById(mapped.realId);
-      const item = await getItem('components', id);
-      if (item) return { data: item };
-      return Promise.reject({ status: 404, message: 'Komponen sementara tidak ditemukan di penyimpanan lokal.' });
-    }
-    try {
-      const res = await apiClient.get(`/components/${id}`);
-      if (res?.data) {
-        const { putItem } = await import('../offline/db');
-        await putItem('components', res.data);
+      try {
+        const db = await withTimeout(import('../offline/db'));
+        const mapped = await db.getItem('idmap', id);
+        if (mapped?.realId) return this.getById(mapped.realId);
+        const item = await db.getItem('components', id);
+        if (item) return { data: item };
+        return Promise.reject({ status: 404, message: 'Komponen sementara tidak ditemukan di penyimpanan lokal.' });
+      } catch (err) {
+        return Promise.reject(err?.status ? err : { status: 404, message: err?.message || 'Gagal membaca komponen sementara.' });
       }
-      return res;
+    }
+    let res;
+    try {
+      res = await apiClient.get(`/components/${id}`);
     } catch (err) {
       if (isNetworkError(err)) {
-        const { getItem } = await import('../offline/db');
-        const item = await getItem('components', id);
-        if (item) return { data: item };
+        try {
+          const item = await withTimeout(import('../offline/db').then((m) => m.getItem('components', id)));
+          if (item) return { data: item };
+        } catch {
+          // Bila offline gagal, teruskan error jaringan asli
+          throw err;
+        }
       }
       throw err;
     }
+
+    if (res?.data) {
+      import('../offline/db').then((m) => m.putItem('components', res.data)).catch(() => {});
+    }
+    return res;
   }
 
   async create(data) {
