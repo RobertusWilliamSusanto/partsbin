@@ -1,6 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
-import { WifiOff, Download, RefreshCw, AlertCircle, RotateCcw, Trash2 } from 'lucide-react';
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
+import { WifiOff, Download } from 'lucide-react';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
+
+// Memuat panel antrean & op gagal secara lazy agar bundle awal tetap ringan
+const OfflinePanel = lazy(() => import('./OfflinePanel'));
 
 // Deteksi apakah aplikasi dibuka dalam mode standalone PWA
 function getIsStandalone() {
@@ -22,7 +25,7 @@ export default function PWABadge() {
     return typeof window !== 'undefined' ? window.__pwaPrompt || null : null;
   });
 
-  // Memuat ringkasan operasi antrean offline tanpa membebani bundle awal lewat import dinamis
+  // Memuat status outbox secara asinkron tanpa memblokir initial render
   const refreshOutboxStatus = useCallback(async () => {
     try {
       const { getAll } = await import('../offline/db');
@@ -32,7 +35,7 @@ export default function PWABadge() {
       setPendingCount(pending.length);
       setFailedOps(failed);
     } catch {
-      // Abaikan jika IndexedDB belum siap
+      // Abaikan bila IndexedDB belum tersedia
     }
   }, []);
 
@@ -128,7 +131,8 @@ export default function PWABadge() {
   };
 
   const showInstall = Boolean(installPrompt) && !isStandalone;
-  const showBadge = !isOnline || pendingCount > 0 || failedOps.length > 0 || showInstall;
+  const hasOps = pendingCount > 0 || failedOps.length > 0;
+  const showBadge = !isOnline || hasOps || showInstall;
 
   if (!showBadge) return null;
 
@@ -144,56 +148,19 @@ export default function PWABadge() {
           </div>
         )}
 
-        {pendingCount > 0 && (
-          <div className="pwa-badge__box glass" role="status">
-            <div className="pwa-badge__text">
-              <RefreshCw size={18} className={isSyncing ? 'animate-spin' : ''} aria-hidden="true" />
-              <span>{pendingCount} perubahan menunggu sinkron</span>
-            </div>
-            {isOnline && (
-              <button
-                type="button"
-                className="btn btn--primary btn--sm"
-                onClick={handleSyncNow}
-                disabled={isSyncing}
-              >
-                <span>{isSyncing ? 'Menyinkronkan...' : 'Sinkronkan Sekarang'}</span>
-              </button>
-            )}
-          </div>
+        {hasOps && (
+          <Suspense fallback={null}>
+            <OfflinePanel
+              pendingCount={pendingCount}
+              failedOps={failedOps}
+              isOnline={isOnline}
+              isSyncing={isSyncing}
+              onSyncNow={handleSyncNow}
+              onRetry={handleRetry}
+              onDiscard={handleDiscard}
+            />
+          </Suspense>
         )}
-
-        {failedOps.map((op) => (
-          <div key={op.id} className="pwa-badge__box glass" style={{ borderColor: 'var(--danger)' }} role="alert">
-            <div className="pwa-badge__text">
-              <AlertCircle size={18} style={{ color: 'var(--danger)', flexShrink: 0 }} aria-hidden="true" />
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <span style={{ fontWeight: 600, fontSize: 13 }}>Sinkronisasi Gagal</span>
-                <span style={{ fontSize: 12, opacity: 0.85 }}>{op.lastError || 'Ditolak oleh server.'}</span>
-              </div>
-            </div>
-            <div className="row-wrap" style={{ gap: 4 }}>
-              <button
-                type="button"
-                className="btn btn--outline btn--sm"
-                onClick={() => handleRetry(op.id)}
-                title="Coba sinkronkan ulang"
-              >
-                <RotateCcw size={14} aria-hidden="true" />
-                <span>Coba Lagi</span>
-              </button>
-              <button
-                type="button"
-                className="btn btn--ghost btn--sm"
-                onClick={() => handleDiscard(op.id)}
-                title="Buang perubahan lokal dan pulihkan dari server"
-              >
-                <Trash2 size={14} aria-hidden="true" />
-                <span>Buang</span>
-              </button>
-            </div>
-          </div>
-        ))}
 
         {showInstall && (
           <div className="pwa-badge__box glass">
