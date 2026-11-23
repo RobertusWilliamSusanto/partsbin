@@ -101,6 +101,7 @@ partsbin/
 │   │   │   └── projectRoutes.js      # Definisi endpoint /api/projects
 │   │   ├── middlewares/
 │   │   │   ├── upload.js             # Multer 2.x memoryStorage, limit 2 MB, MIME & magic bytes guard
+│   │   │   ├── validateUuid.js       # Validasi format UUID terpusat pada router.param(:id, :itemId)
 │   │   │   └── errorHandler.js       # Pemetaan error terpusat (400, 403, 404, 409, 413, 500)
 │   │   └── index.js                  # Entry point Express 5, CORS, & registrasi route
 │   ├── requests.http                 # Pengujian 16 endpoint positif + skenario negatif
@@ -109,9 +110,8 @@ partsbin/
 │   └── package.json
 └── web/                              # Frontend PWA (Vercel Root Directory = web)
     ├── public/
-    │   ├── icon-192.png              # Ikon PWA 192x192 (purpose: any)
-    │   ├── icon-512.png              # Ikon PWA 512x512 (purpose: any maskable)
-    │   └── icon.svg
+    │   ├── icon-192.png              # Ikon PWA 192x192 (purpose: any & maskable)
+    │   └── icon-512.png              # Ikon PWA 512x512 (purpose: any & maskable)
     ├── src/
     │   ├── config/
     │   │   ├── api.js                # Axios instance + response interceptor + timeout 30s upload
@@ -362,3 +362,20 @@ Service Worker Workbox:
 1. `NetworkFirst` untuk rute API `/api/` (`partsbin-api-cache`, timeout 5 detik).
 2. `CacheFirst` untuk gambar Supabase Storage bucket `project-images` (`partsbin-images`, 60 entri, umur 30 hari).
 3. Tag gambar frontend menyertakan atribut `<img crossOrigin="anonymous">`.
+
+---
+
+## 8. Postur Keamanan & Keterbatasan yang Diketahui
+
+Berikut adalah rekapitulasi audit keamanan dan mitigasi yang diterapkan pada repositori PartsBin:
+
+| ID | Aspek Keamanan & Hipotesis | Hasil Verifikasi Kode | Mitigasi yang Diterapkan | Status Saat Ini |
+| :--- | :--- | :---: | :--- | :--- |
+| **H1** | API publik tanpa autentikasi pengguna | **Terkonfirmasi** | Tidak menerapkan login/token demi kepatuhan arsitektur Modul 1 dan kemudahan penilaian responsi asisten praktikum. | **Keterbatasan Diketahui** (Lingkup Tugas) |
+| **H2** | CORS sebagai batas tunggal akses browser | **Terkonfirmasi** | CORS membatasi origin browser luar (`evil.example` -> 403), ditambahkan header `X-Content-Type-Options: nosniff` dan `Referrer-Policy: no-referrer`. Akses non-browser (curl/script) tetap terbuka. | **Keterbatasan Diketahui** |
+| **H3** | RLS dinonaktifkan pada tabel database | **Terkonfirmasi** | RLS di-disable sesuai pola Modul 1. Mitigasi: Supabase key tidak pernah dibocorkan ke frontend client. | **Keterbatasan Diketahui** |
+| **H4** | Backend memakai anon key & policy storage public | **Terkonfirmasi** | Policy Storage tidak memiliki batasan per role. Mitigasi: Validasi biner buffer (magic bytes) dilakukan di Express sebelum upload. | **Keterbatasan Diketahui** |
+| **H5** | Frontend bersih dari Supabase key dan client | **Terkonfirmasi** | Frontend murni menggunakan Axios JSON ke `/api/*` tanpa dependensi `@supabase/supabase-js`, `.env` diabaikan git, dan riwayat commit bebas key. | **Aman / Sesuai Desain** |
+| **H6** | Validasi upload gambar aman & anti-bypass | **Terkonfirmasi** | Memakai `multer.memoryStorage()`, batas 2 MB, magic bytes biner (JPEG, PNG, WebP), nama UUID server, dan rollback storage saat update DB gagal. | **Aman / Sesuai Desain** |
+| **H7** | Tidak ada rate limiting; errorHandler aman | **Terkonfirmasi** | Error 500 tidak membocorkan stack trace ke client. Ditambahkan validasi format UUID terpusat (`validateUuid.js`) pada parameter `:id` dan `:itemId`. Rate limiting ditiadakan sesuai larangan middleware berat di praktikum. | **Mitigasi Parsial** |
+

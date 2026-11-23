@@ -261,7 +261,16 @@ curl -s -X PATCH http://localhost:3000/api/components/UUID_KOMPONEN/stock -H "Co
 
 ---
 
-## 8. Checklist Asistensi Asprak
+## 8. Catatan Keamanan & Batasan Lingkup Praktikum
+
+Aplikasi PartsBin dirancang dengan postur keamanan yang disesuaikan untuk tugas praktikum:
+1. **Frontend Bersih dari Kunci API**: Klien browser murni berkomunikasi dengan backend Express via Axios JSON. Kunci Supabase tidak pernah di-bundle ke dalam build frontend.
+2. **Validasi File & Input Ketat**: Unggahan foto proyek diperiksa menggunakan inspeksi *magic bytes* biner in-memory (`memoryStorage`) tanpa menyentuh disk serverless, dibatasi 2 MB, dan parameter rute divalidasi format UUID secara terpusat (`validateUuid.js`).
+3. **Keterbatasan yang Diketahui untuk Praktikum**: Endpoint API tidak dipasangi sistem login/token pengguna untuk memenuhi kepatuhan arsitektur Modul 1 dan memudahkan pengujian langsung oleh asisten praktikum saat responsi. Kebijakan CORS membatasi akses lintas browser, namun request server-ke-server langsung (seperti `curl`) tetap dapat menjangkau endpoint API publik.
+
+---
+
+## 9. Checklist Asistensi Asprak
 
 - [ ] URL Deploy Frontend aktif: https://partsbin-web.vercel.app
 - [ ] URL Deploy Backend aktif: https://partsbin-api.vercel.app/api/health
