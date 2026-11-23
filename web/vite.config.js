@@ -55,9 +55,14 @@ export default defineConfig({
             // Berfungsi lintas-origin (frontend & backend beda subdomain Vercel)
             urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
             handler: 'NetworkFirst',
+            method: 'GET',
             options: {
               cacheName: 'partsbin-api-cache',
               networkTimeoutSeconds: 5,
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 7 * 24 * 60 * 60, // 7 hari
+              },
               cacheableResponse: {
                 statuses: [0, 200],
               },
