@@ -47,10 +47,21 @@ export function useComponents() {
         if (active) setLoading(false);
       });
 
+    // Dengarkan event sinkronisasi lintas-tab dan sinkronisasi latar belakang
+    const handleSync = () => {
+      refetch({ silent: true });
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('partsbin:sync-event', handleSync);
+    }
+
     return () => {
       active = false;
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('partsbin:sync-event', handleSync);
+      }
     };
-  }, [reloadKey]);
+  }, [reloadKey, refetch]);
 
   return { components, setComponents, loading, error, refetch };
 }
@@ -95,10 +106,21 @@ export function useComponent(id) {
         if (active) setLoading(false);
       });
 
+    // Dengarkan event sinkronisasi lintas-tab untuk menyegarkan detail
+    const handleSync = () => {
+      refetch({ silent: true });
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('partsbin:sync-event', handleSync);
+    }
+
     return () => {
       active = false;
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('partsbin:sync-event', handleSync);
+      }
     };
-  }, [id, reloadKey]);
+  }, [id, reloadKey, refetch]);
 
   const activeComponent = component?.id === id ? component : cached;
   const isInitialLoading = loading && !activeComponent;

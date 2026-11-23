@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import {
   BrowserRouter,
   Routes,
@@ -49,6 +49,13 @@ function AppShell() {
   const { pathname } = useLocation();
   const { theme, toggleTheme } = useTheme();
   const meta = getRouteMeta(pathname);
+
+  // Inisialisasi pendengar event sinkronisasi offline di latar belakang via dynamic import
+  useEffect(() => {
+    import('./offline/syncEngine').then(({ initSyncEngineListeners }) => {
+      initSyncEngineListeners();
+    });
+  }, []);
 
   return (
     <div className="shell">
