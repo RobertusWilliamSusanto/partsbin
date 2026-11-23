@@ -18,8 +18,13 @@ export async function overlayComponents(serverList) {
   // Salin entitas server jika tidak dihapus atau tidak sedang diubah offline
   for (const comp of serverList) {
     if (deletedIds.has(comp.id)) continue;
-    if (pendingIds.has(comp.id) && localMap.has(comp.id)) {
-      result.push(localMap.get(comp.id));
+    const local = localMap.get(comp.id);
+    const isPending = pendingIds.has(comp.id);
+    // Cegah balapan cache Service Worker NetworkFirst (5s) menimpa data lokal yang baru saja disinkronkan
+    const isRecentlySynced = local?.syncedAt && Date.now() - local.syncedAt < 15000;
+
+    if (local && (isPending || isRecentlySynced)) {
+      result.push(local);
     } else {
       result.push(comp);
       await putItem('components', comp);
@@ -53,8 +58,13 @@ export async function overlayProjects(serverList) {
 
   for (const proj of serverList) {
     if (deletedIds.has(proj.id)) continue;
-    if (pendingIds.has(proj.id) && localMap.has(proj.id)) {
-      result.push(localMap.get(proj.id));
+    const local = localMap.get(proj.id);
+    const isPending = pendingIds.has(proj.id);
+    // Cegah balapan cache Service Worker NetworkFirst (5s) menimpa data proyek lokal yang baru saja disinkronkan
+    const isRecentlySynced = local?.syncedAt && Date.now() - local.syncedAt < 15000;
+
+    if (local && (isPending || isRecentlySynced)) {
+      result.push(local);
     } else {
       result.push(proj);
       await putItem('projects', proj);

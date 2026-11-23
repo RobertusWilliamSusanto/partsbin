@@ -160,9 +160,10 @@ export async function flushOutbox() {
             await applyTempIdMapping(op.tempId, result.data.id, op.entityType);
           }
           if (op.entityType === 'component' && result.data) {
-            await putItem('components', result.data);
+            // Berikan penanda waktu sinkronisasi untuk melindungi data lokal dari balapan respons cache basi
+            await putItem('components', { ...result.data, syncedAt: Date.now() });
           } else if (op.entityType === 'project' && result.data) {
-            await putItem('projects', result.data);
+            await putItem('projects', { ...result.data, syncedAt: Date.now() });
           }
           await removeOp(op.id);
           backoffIndex = 0; // Reset backoff jika operasi berhasil
