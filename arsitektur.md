@@ -228,14 +228,16 @@ Ketiga tabel menonaktifkan RLS (`DISABLE ROW LEVEL SECURITY`) sesuai pola Modul 
    - `created_at`: `TIMESTAMPTZ NOT NULL DEFAULT now()`
    - `CONSTRAINT unique_project_component UNIQUE (project_id, component_id)`
 
-4. **Tabel `project_photos` (Dokumentasi Foto Proyek v5.0)**:
+4. **Tabel `project_photos` (Dokumentasi Foto Proyek v5.0 - v5.3)**:
    - `id`: `UUID PRIMARY KEY DEFAULT gen_random_uuid()`
    - `project_id`: `UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE`
    - `image_path`: `TEXT NOT NULL`
+   - `thumb_path`: `TEXT DEFAULT NULL` (ditambahkan via `migration_v5_3.sql` untuk thumbnail)
    - `caption`: `VARCHAR(200) NOT NULL DEFAULT ''`
    - `created_at`: `TIMESTAMPTZ NOT NULL DEFAULT now()`
    - Index: `idx_project_photos_project_created ON project_photos (project_id, created_at)`
    - RLS: `DISABLE ROW LEVEL SECURITY`
+   - Kuota: Batas 60 foto dikelola di layer aplikasi (`MAX_PHOTOS_PER_PROJECT = 60`). Trigger DB v5.1 dibatalkan via `migration_v5_2.sql` agar arsitektur tetap bersih tanpa trigger.
 
 ### Skrip Migrasi SQL Idempoten (`api/sql/migration_v4.sql`)
 ```sql
@@ -304,7 +306,7 @@ Seluruh respons sukses mengembalikan `{ data }` (atau `{ message, data }`) dan s
 | 6 | `PATCH` | `/api/components/:id/stock` | `{ stock }` (integer >= 0) | `200` | `400`, `404` |
 | 7 | `DELETE` | `/api/components/:id` | - | `200` | `400`, `404`, `409` |
 | 8 | `GET` | `/api/projects` | - | `200` | `500` |
-| 9 | `GET` | `/api/projects/:id` | - (Termasuk items, summary BOM, & array photos galeri) | `200` | `400`, `404` |
+| 9 | `GET` | `/api/projects/:id` | - (Termasuk items, summary BOM, `photo_limit: 60`, & array photos dengan `thumb_path` & `thumb_url`) | `200` | `400`, `404` |
 | 10 | `POST` | `/api/projects` | `{ name, description, status?, items? }` (items: array of `{ component_id, quantity_needed }`) | `201` | `400`, `409` |
 | 11 | `PUT` | `/api/projects/:id` | `{ name, description }` | `200` | `400`, `404` |
 | 12 | `DELETE` | `/api/projects/:id` | - (Hapus cascade DB + best-effort hapus sampul & semua foto di Storage) | `200` | `400`, `404` |
@@ -312,7 +314,7 @@ Seluruh respons sukses mengembalikan `{ data }` (atau `{ message, data }`) dan s
 | 14 | `DELETE` | `/api/projects/:id/items/:itemId` | - | `200` | `400`, `404` |
 | 15 | `PATCH` | `/api/projects/:id/status` | `{ status }` (wajib enum: `'planned'` \| `'in_progress'` \| `'done'`) | `200` | `400`, `404` |
 | 16 | `POST` | `/api/projects/:id/image` | `multipart/form-data`, field: `image` (max 2 MB, JPEG/PNG/WebP) | `200` | `400`, `404`, `413` |
-| 17 | `POST` | `/api/projects/:id/photos` | `multipart/form-data`, field: `image` (+ field teks `caption`) (max 2 MB, max 12 foto) | `201` | `400`, `404`, `413` |
+| 17 | `POST` | `/api/projects/:id/photos` | `multipart/form-data`, field: `image` (wajib, max 2 MB) + `thumb` (opsional, max 150 KB) + `caption` (maks 60 foto) | `201` | `400`, `404`, `413` |
 | 18 | `PATCH` | `/api/projects/:id/photos/:photoId` | `{ caption }` (teks maksimal 200 karakter) | `200` | `400`, `404` |
 | 19 | `DELETE` | `/api/projects/:id/photos/:photoId` | - (Hapus foto dari DB + best-effort hapus berkas di Storage) | `200` | `400`, `404` |
 
@@ -392,11 +394,23 @@ Menerima opsi `{ syncUrl = true }`.
    - Kunci localStorage: `'partsbin_draft_calculator'`.
    - Data tersimpan: `{ name, description, items: [{ component_id, quantity_needed }] }`.
    - Berkas gambar **TIDAK IKUT** disimpan di localStorage.
-2. **Kompresi Gambar Canvas API (`web/src/utils/imageCompress.js`)**:
+2. **Kompresi Gambar Canvas API & Rendisi Ganda (`web/src/utils/imageCompress.js`)**:
    - Menggunakan API bawaan `createImageBitmap` dan `HTMLCanvasElement`.
-   - Sisi terpanjang maksimal `1024px`, kualitas dinamis `0.8 > 0.7 > 0.6`, target `< 200 KB` (mencoba WebP, fallback ke JPEG).
+   - `compressImage(file)` (Sampul): Sisi terpanjang maks 1024px, target < 200 KB.
+   - `compressWithThumb(file)` (Dokumentasi): Single decode `createImageBitmap` untuk menghasilkan 2 rendisi:
+     - Full: maks 1024px, target < 200 KB, WebP/JPEG.
+     - Thumb: maks 720px, kualitas adaptif 0.75 > 0.65 > 0.55, target <= 80 KB, WebP/JPEG.
    - Menggunakan `createImageBitmap` dengan opsi `{ imageOrientation: 'from-image' }` untuk menangani orientasi EXIF kamera mobile secara otomatis, dan memanggil `bitmap.close()` di blok `finally` untuk mencegah kebocoran memori perangkat.
-3. **Alur Finalisasi Proyek di Kalkulator (Mendukung Offline Penuh)**:
+3. **Galeri Berhalaman & Viewer Dialog (`web/src/components/ProjectGallery.jsx`)**:
+   - Paginasi klien: 12 foto per batch (`PAGE_SIZE = 12`) dengan tombol "Tampilkan 12 lagi".
+   - Antrean sekuensial dengan penanganan error jaringan: jeda saat putus dan tombol "Coba lagi unggah yang gagal".
+   - Concurrency guard `uploadingRef` mencegah trigger ganda saat input berubah.
+   - Penampil foto: native HTML5 `<dialog>` dengan tombol navigasi Prev/Next/Tutup, keyboard Escape, dan backdrop click.
+4. **Cetak Dokumen PDF (`ProjectDocumentPrint.jsx` & CSS Cetak)**:
+   - Render dokumen rapi dengan layout A4, logo, tabel BOM, status, dan grid foto dokumentasi.
+   - Gambar cetak menggunakan `thumb_url ?? image_url` untuk performa render kilat (< 1.2 detik untuk 60 foto).
+   - Zero dependensi library PDF eksternal (murni `@media print` dan `window.print()`).
+5. **Alur Finalisasi Proyek di Kalkulator (Mendukung Offline Penuh)**:
    - *Perubahan Keputusan Sadar*: Tombol Finalisasi **TIDAK LAGI** dinonaktifkan saat offline (`disabled={submitting}`).
    - *Alur Offline-First*:
      - Jika Online: `POST /api/projects` -> jika sukses & ada gambar: `POST /api/projects/:id/image` -> hapus draf -> navigasikan ke detail.
@@ -406,8 +420,9 @@ Menerima opsi `{ syncUrl = true }`.
 ### Konfigurasi PWA & Offline Caching Gambar (`web/vite.config.js`)
 Service Worker Workbox:
 1. `NetworkFirst` untuk rute API `/api/` (`partsbin-api-cache`, timeout 5 detik).
-2. `CacheFirst` untuk gambar Supabase Storage bucket `project-images` (`partsbin-images`, 60 entri, umur 30 hari).
-3. Tag gambar frontend menyertakan atribut `<img crossOrigin="anonymous">`.
+2. `CacheFirst` untuk thumbnail Supabase Storage (`partsbin-thumbs`, 400 entri, umur 30 hari, pattern `_t.(webp|jpg|jpeg|png)`).
+3. `CacheFirst` untuk gambar utama Supabase Storage bucket `project-images` (`partsbin-images`, 60 entri, umur 30 hari).
+4. Tag gambar frontend menyertakan atribut `<img crossOrigin="anonymous">`.
 
 ---
 
@@ -426,6 +441,7 @@ Berikut adalah rekapitulasi audit keamanan dan mitigasi yang diterapkan pada rep
 | **H7** | Tidak ada rate limiting; errorHandler aman | **Terkonfirmasi** | Error 500 tidak membocorkan stack trace ke client. Ditambahkan validasi format UUID terpusat (`validateUuid.js`) pada parameter `:id` dan `:itemId`. Rate limiting ditiadakan sesuai larangan middleware berat di praktikum. | **Mitigasi Parsial** |
 | **H8** | Resolusi konflik Last-Write-Wins (LWW) tanpa kolom versi | **Terkonfirmasi** | Skema tabel database Modul 1 tidak memiliki kolom versi/timestamp konkurensi. Mutasi offline dieksekusi secara FIFO saat sinkronisasi (last-write-wins). | **Keterbatasan Diketahui** (Pilihan Desain Sederhana) |
 | **H9** | Batas kapasitas outbox offline 200 operasi dan kedaluwarsa 30 hari | **Terkonfirmasi** | Kuota outbox dibatasi maksimal 200 entri untuk mencegah kehabisan memori browser (QuotaExceededError). Operasi yang tertahan > 30 hari ditandai kedaluwarsa. | **Mitigasi Diterapkan** |
+| **H10** | Batas kuota 60 foto di aplikasi tanpa database trigger | **Terkonfirmasi** | Trigger v5.1 dibatalkan via v5.2 demi menghindari SQLSTATE 23514 generik dan menjaga kesederhanaan skema. Kuota ditegakkan di controller `addPhoto`. Unggahan simultan lintas-perangkat dapat melampaui batas 1-2 foto, namun dampaknya nol terhadap integritas data. | **Pilihan Desain Sadar** (Batas Lunak Sederhana) |
 
 ---
 
