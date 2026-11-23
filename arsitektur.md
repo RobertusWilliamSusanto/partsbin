@@ -47,10 +47,13 @@ PartsBin adalah Progressive Web App (PWA) manajemen inventaris komponen elektron
 9. **Dokumentasi Proyek & Cetak PDF (Fitur Tambahan v5.0)**:
    - **Galeri Foto Dokumentasi (Online-Only)**: Foto proyek disimpan pada tabel terpisah `project_photos` dengan berkas di bucket Supabase Storage `project-images` (`projects/<projectId>/docs/<uuid>.<ext>`). Mutasi foto (unggah, edit caption, hapus) HANYA diizinkan saat online dan pada proyek ber-ID riil (bukan `tmp_*`), karena berkas foto dokumentasi tidak diantrekan offline guna menjaga efisiensi kuota penyimpanan lokal dan mencegah lonjakan bandwidth sinkronisasi. Pembacaan galeri foto saat offline tetap didukung melalui cache Service Worker (`CacheFirst` dinaikkan ke 150 entri) dan IndexedDB.
    - **Batas 12 Foto & Kompresi Klien**: Setiap proyek dibatasi maksimal 12 foto dokumentasi guna melindungi kapasitas storage server. Kompresi gambar sisi klien menggunakan `imageCompress.js` (< 200 KB, maks 1024 px) sebelum pengunggahan sekuensial.
-   - **Ekspor Dokumen PDF Tanpa Library Eksternal (CSS Cetak + window.print)**: Menggunakan stylesheet cetak A4 `@media print` murni dengan `window.print()`. Tidak menggunakan library PDF client/server pihak ketiga (seperti jsPDF/pdfmake) demi kepatuhan daftar putih dan pencegahan pembengkakan bundle. Pengguna memilih opsi 'Simpan sebagai PDF' di dialog cetak browser.
+   - **Ekspor Dokumen PDF Biner Langsung (jsPDF Lazy) & Cetak Fisik Browser (@media print)**:
+     - **Unduh PDF Langsung Sekali Klik**: Menggunakan utilitas `pdfExport.js` dengan `jsPDF` + `jspdf-autotable` yang dimuat secara dinamis (`import()`) saat tombol ditekan. Menghasilkan berkas `.pdf` biner nyata langsung terunduh ke perangkat pengguna tanpa memicu dialog printer bawaan OS yang kerap langsung mencetak ke printer fisik desktop.
+     - **Cetak Dokumen Fisik**: Tetap menyediakan tombol "Cetak Dokumen" menggunakan stylesheet `@media print` A4 murni dan `window.print()` jika pengguna memang ingin mencetak ke lembar kertas fisik.
+     - **Pencegahan Pembengkakan Bundle**: Karena `jsPDF` diimpor dinamis (lazy chunk), ukuran awal berkas bundle JS (`index.js` gzip) tetap berada di 117.85 KB (< 120.67 KB batas aman).
    - **Keterbatasan Jujur untuk Responsi**:
-     1. Bukan unduhan berkas PDF biner langsung sekali klik (`.pdf` generated server/canvas), melainkan mengandalkan dialog cetak bawaan browser (*Save as PDF*).
-     2. Pada mode PWA iOS *standalone*, pemanggilan `window.print()` memiliki batasan dukungan WebKit dan disarankan dibuka melalui tab Safari.
+     1. Unduh berkas PDF biner langsung sekali klik (`.pdf` generated client-side via jsPDF lazy-load).
+     2. Pada mode PWA iOS *standalone*, tombol "Cetak Dokumen" (window.print) memiliki batasan WebKit sehingga pengguna disarankan memakai tombol "Unduh PDF" langsung.
      3. Foto dokumentasi tidak dapat diunggah atau diantrekan saat offline (tombol dinonaktifkan secara eksplisit dengan teks bantuan).
 
 ---
@@ -406,10 +409,10 @@ Menerima opsi `{ syncUrl = true }`.
    - Antrean sekuensial dengan penanganan error jaringan: jeda saat putus dan tombol "Coba lagi unggah yang gagal".
    - Concurrency guard `uploadingRef` mencegah trigger ganda saat input berubah.
    - Penampil foto: native HTML5 `<dialog>` dengan tombol navigasi Prev/Next/Tutup, keyboard Escape, dan backdrop click.
-4. **Cetak Dokumen PDF (`ProjectDocumentPrint.jsx` & CSS Cetak)**:
+4. **Cetak Dokumen PDF (`pdfExport.js` & `ProjectDocumentPrint.jsx`)**:
    - Render dokumen rapi dengan layout A4, logo, tabel BOM, status, dan grid foto dokumentasi.
-   - Gambar cetak menggunakan `thumb_url ?? image_url` untuk performa render kilat (< 1.2 detik untuk 60 foto).
-   - Zero dependensi library PDF eksternal (murni `@media print` dan `window.print()`).
+   - Unduh PDF biner langsung sekali klik via `jsPDF` lazy-chunk (`exportProjectPdf`), tanpa memicu dialog printer fisik desktop.
+   - Opsi cetak fisik browser tetap didukung via `@media print` dan `window.print()` pada tombol "Cetak Dokumen".
 5. **Alur Finalisasi Proyek di Kalkulator (Mendukung Offline Penuh)**:
    - *Perubahan Keputusan Sadar*: Tombol Finalisasi **TIDAK LAGI** dinonaktifkan saat offline (`disabled={submitting}`).
    - *Alur Offline-First*:
