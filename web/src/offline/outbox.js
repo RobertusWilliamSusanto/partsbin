@@ -64,6 +64,8 @@ export async function enqueueOp({ endpoint, method, entityType, entityId, payloa
         await deleteItem('outbox', op.id);
       }
     }
+    // Hapus juga blob gambar terkait yang mungkin tersimpan lokal
+    await deleteItem('blobs', `blob_${targetId}`);
     return null;
   }
 

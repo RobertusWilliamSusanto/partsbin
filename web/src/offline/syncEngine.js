@@ -164,6 +164,25 @@ export async function flushOutbox() {
             await putItem('components', { ...result.data, syncedAt: Date.now() });
           } else if (op.entityType === 'project' && result.data) {
             await putItem('projects', { ...result.data, syncedAt: Date.now() });
+            // Unggah berkas blob gambar sampul bila ada yang tersimpan secara offline
+            const targetProjId = result.data.id;
+            const tempBlobKey = op.tempId ? `blob_${op.tempId}` : null;
+            const realBlobKey = `blob_${targetProjId}`;
+            const pendingBlob = (tempBlobKey ? await getItem('blobs', tempBlobKey) : null) || (await getItem('blobs', realBlobKey));
+            if (pendingBlob?.file) {
+              try {
+                const formData = new FormData();
+                formData.append('image', pendingBlob.file);
+                await apiClient.post(`/projects/${targetProjId}/image`, formData, {
+                  timeout: 30000,
+                  headers: { 'Content-Type': undefined },
+                });
+                if (tempBlobKey) await deleteItem('blobs', tempBlobKey);
+                await deleteItem('blobs', realBlobKey);
+              } catch {
+                // Biarkan tersimpan untuk percobaan berikutnya bila upload gambar belum berhasil
+              }
+            }
           }
           await removeOp(op.id);
           backoffIndex = 0; // Reset backoff jika operasi berhasil

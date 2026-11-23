@@ -190,6 +190,10 @@ export async function offlineCreateProject(payload) {
 
 // Penanganan penyimpanan berkas blob gambar sampul secara offline ke IndexedDB
 export async function offlineSaveProjectImage(projectId, file) {
+  // Batasi ukuran gambar maksimal 5 MB untuk mencegah pemborosan kuota penyimpanan
+  if (file && file.size > 5 * 1024 * 1024) {
+    throw new Error('Ukuran gambar melebihi batas maksimal 5 MB.');
+  }
   const blobEntry = {
     id: `blob_${projectId}`,
     projectId,
@@ -233,6 +237,8 @@ export async function offlineUpdateProject(id, payload) {
 // Penanganan penghapusan proyek secara offline
 export async function offlineDeleteProject(id) {
   await deleteItem('projects', id);
+  // Bersihkan berkas blob gambar terkait agar tidak menjadi data yatim di IndexedDB
+  await deleteItem('blobs', `blob_${id}`);
   await enqueueOp({
     endpoint: `/projects/${id}`,
     method: 'DELETE',
