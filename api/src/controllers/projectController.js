@@ -8,6 +8,9 @@ import { detectImageFormatFromBuffer } from '../middlewares/upload.js';
 const ALLOWED_STATUS = new Set(['planned', 'in_progress', 'done']);
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+// Batas kuota foto per proyek (konstanta tunggal batas lunak di lapisan aplikasi)
+export const MAX_PHOTOS_PER_PROJECT = 60;
+
 function parseIntStrict(val) {
   if (typeof val !== 'number' && typeof val !== 'string') return null;
   if (typeof val === 'string' && val.trim() === '') return null;
@@ -130,7 +133,15 @@ export const projectController = {
         photos = [];
       }
 
-      return res.status(200).json({ data: { ...rest, items, summary, photos } });
+      return res.status(200).json({
+        data: {
+          ...rest,
+          items,
+          summary,
+          photos,
+          photo_limit: MAX_PHOTOS_PER_PROJECT,
+        },
+      });
     } catch (err) {
       return next(err);
     }
@@ -415,10 +426,12 @@ export const projectController = {
         return res.status(404).json({ error: 'Proyek tidak ditemukan.' });
       }
 
-      // Verifikasi batas maksimal 12 foto per proyek
+      // Verifikasi batas maksimal foto per proyek
       const photoCount = await projectPhotoModel.countByProjectId(req.params.id);
-      if (photoCount >= 12) {
-        return res.status(400).json({ error: 'Jumlah foto telah mencapai batas maksimal 12 foto per proyek.' });
+      if (photoCount >= MAX_PHOTOS_PER_PROJECT) {
+        return res.status(400).json({
+          error: `Jumlah foto telah mencapai batas maksimal ${MAX_PHOTOS_PER_PROJECT} foto per proyek.`,
+        });
       }
 
       // 2. Unggah berkas ke Supabase Storage bucket 'project-images'

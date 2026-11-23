@@ -31,7 +31,7 @@ export const projectPhotoModel = {
     }
   },
 
-  // Hitung jumlah foto yang dimiliki suatu proyek untuk validasi batas maksimal 12 foto
+  // Hitung jumlah foto yang dimiliki suatu proyek untuk validasi batas kuota foto
   async countByProjectId(projectId) {
     const { count, error } = await supabase
       .from('project_photos')

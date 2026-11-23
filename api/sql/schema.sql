@@ -62,25 +62,3 @@ ALTER TABLE components DISABLE ROW LEVEL SECURITY;
 ALTER TABLE projects DISABLE ROW LEVEL SECURITY;
 ALTER TABLE project_items DISABLE ROW LEVEL SECURITY;
 ALTER TABLE project_photos DISABLE ROW LEVEL SECURITY;
-
--- 5. Trigger validasi batas maksimal 12 foto per proyek (mencegah race condition upload paralel)
-CREATE OR REPLACE FUNCTION check_max_project_photos()
-RETURNS TRIGGER AS $$
-DECLARE
-  v_count INTEGER;
-BEGIN
-  PERFORM 1 FROM projects WHERE id = NEW.project_id FOR UPDATE;
-  SELECT count(*) INTO v_count FROM project_photos WHERE project_id = NEW.project_id;
-  IF v_count >= 12 THEN
-    RAISE EXCEPTION 'Jumlah foto telah mencapai batas maksimal 12 foto per proyek.'
-      USING ERRCODE = 'check_violation';
-  END IF;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-DROP TRIGGER IF EXISTS trg_check_max_project_photos ON project_photos;
-CREATE TRIGGER trg_check_max_project_photos
-  BEFORE INSERT ON project_photos
-  FOR EACH ROW
-  EXECUTE FUNCTION check_max_project_photos();
