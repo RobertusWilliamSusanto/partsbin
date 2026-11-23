@@ -72,6 +72,30 @@ export async function overlayProjects(serverList) {
   return result;
 }
 
+// Penanganan pembuatan komponen baru secara offline dengan ID sementara
+export async function offlineCreateComponent(payload) {
+  const tempId = `tmp_${typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : ('comp_' + Date.now())}`;
+  const newComp = {
+    ...payload,
+    id: tempId,
+    stock: Number(payload.stock ?? 0),
+    min_stock: Number(payload.min_stock ?? 2),
+    unit_price: Number(payload.unit_price ?? 0),
+    is_low_stock: Number(payload.stock ?? 0) <= Number(payload.min_stock ?? 2),
+    created_at: new Date().toISOString(),
+  };
+  await putItem('components', newComp);
+  await enqueueOp({
+    endpoint: '/components',
+    method: 'POST',
+    entityType: 'component',
+    entityId: tempId,
+    payload,
+    tempId,
+  });
+  return { data: newComp };
+}
+
 // Penanganan pembaruan stok komponen secara offline (optimistis + antre outbox)
 export async function offlineUpdateStock(id, nextStock) {
   const comp = (await getItem('components', id)) || { id, stock: 0, min_stock: 2 };
@@ -121,6 +145,49 @@ export async function offlineDeleteComponent(id) {
     payload: {},
   });
   return { data: { id } };
+}
+
+// Penanganan pembuatan proyek baru beserta BOM secara offline dengan ID sementara
+export async function offlineCreateProject(payload) {
+  const tempId = `tmp_${typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : ('proj_' + Date.now())}`;
+  const allComps = await getAll('components');
+  const compMap = Object.fromEntries(allComps.map((c) => [c.id, c]));
+  const items = Array.isArray(payload.items) ? payload.items : [];
+  const calcResult = calcBom(items, compMap);
+
+  const newProj = {
+    id: tempId,
+    name: payload.name,
+    description: payload.description || '',
+    status: payload.status || 'planned',
+    image_url: null,
+    items: calcResult.items,
+    summary: calcResult,
+    created_at: new Date().toISOString(),
+  };
+
+  await putItem('projects', newProj);
+  await enqueueOp({
+    endpoint: '/projects',
+    method: 'POST',
+    entityType: 'project',
+    entityId: tempId,
+    payload,
+    tempId,
+  });
+  return { data: newProj };
+}
+
+// Penanganan penyimpanan berkas blob gambar sampul secara offline ke IndexedDB
+export async function offlineSaveProjectImage(projectId, file) {
+  const blobEntry = {
+    id: `blob_${projectId}`,
+    projectId,
+    file,
+    createdAt: new Date().toISOString(),
+  };
+  await putItem('blobs', blobEntry);
+  return { message: 'Gambar sampul disimpan lokal di IndexedDB dan akan diunggah otomatis saat online.' };
 }
 
 // Penanganan pengubahan status pengerjaan fisik proyek secara offline
