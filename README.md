@@ -41,6 +41,7 @@ Sistem desain menggunakan pendekatan **Technician's Bench Notebook** (*Precision
    - Inline edit informasi proyek, tambah/hapus item BOM, serta konfirmasi hapus destruktif melalui `ConfirmModal.jsx`.
 4. **Profil & Tentang (`/profile`)**: Identitas pembuat, kontrol tema terang/gelap, status koneksi jaringan (`useOnlineStatus`), status draf tersimpan, serta ringkasan arsitektur dan rumus BOM.
 5. **Sinkronisasi Cache Lintas-Hook (`dataCache.js`)**: Setiap mutasi stok/data komponen otomatis meng-invalidasi cache proyek (agar `readiness_percent` dan `shopping_list` selalu akurat saat pindah tab), dan setiap mutasi proyek/item BOM otomatis meng-invalidasi cache detail komponen (`used_in_projects`).
+6. **Dukungan Offline-First & Sinkronisasi Otomatis (IndexedDB + Outbox FIFO)**: Pengguna dapat membaca dan memodifikasi data (buat/edit/hapus komponen, koreksi stok via stepper, buat proyek kalkulator beserta BOM, dan ubah status proyek) saat perangkat offline. Seluruh operasi disimpan lokal di IndexedDB dan diantrekan pada outbox, lalu otomatis disinkronkan ke server secara berurutan saat internet kembali aktif.
 
 ---
 

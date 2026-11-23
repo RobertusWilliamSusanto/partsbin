@@ -37,6 +37,13 @@ PartsBin adalah Progressive Web App (PWA) manajemen inventaris komponen elektron
    - Grafis bawaan / placeholder = SVG inline buatan sendiri <= 1 KB, warna `currentColor`, tanpa gradient, filter (`feGaussianBlur`, `feDropShadow`), SMIL, atau `<script>`.
    - Gambar API wajib memakai atribut `loading="lazy"`, `decoding="async"`, `crossOrigin="anonymous"`, rasio `4:3`, dan fallback SVG saat `onError`.
    - Urutan pengerjaan fase: **Tahap 4A** (Layout, Navigasi, Dashboard list proyek, ProjectCover, Detail status) -> **Tahap 5** (PWA Offline, Service Worker, Webmanifest) -> **Tahap 4B** (Penyempurnaan Kalkulator dengan select & kompresi canvas).
+8. **Arsitektur Offline-First & Sinkronisasi Latar Belakang (IndexedDB + Outbox FIFO)**:
+   - **Perubahan Keputusan Sadar**: Memperbarui keputusan Bagian 7 Pola 4 yang sebelumnya menonaktifkan tombol Finalisasi Kalkulator saat offline. Kini pengguna tetap dapat membaca DAN melakukan mutasi data (edit, hapus, stepper stok, status proyek, buat komponen baru, dan buat proyek baru beserta BOM) saat offline.
+   - **Penyimpanan Lokal & Antrean Mutasi**: Data disimpan lokal di IndexedDB (`partsbin_db`) dan antrean mutasi di-buffer pada store `outbox` (maksimal 200 operasi).
+   - **ID Sementara (`tmp_*`) & Pemetaan**: Pembuatan data baru offline menghasilkan ID sementara `tmp_<crypto.randomUUID()>`. Saat online dan tersinkronisasi, server mengembalikan ID UUID riil yang dipetakan secara otomatis di store `idmap` serta memperbarui seluruh antrean turunan.
+   - **Penyimpanan Berkas Gambar Offline**: Berkas blob gambar sampul proyek disimpan di store `blobs` IndexedDB (BUKAN di `localStorage`), lalu otomatis diunggah via endpoint #16 setelah proyek mendapatkan ID riil dari server.
+   - **Penanganan Konflik**: Menggunakan strategi *Last-Write-Wins* (LWW) sederhana karena skema tabel PostgreSQL tidak memiliki kolom nomor versi atau konkurensi (keterbatasan yang disadari).
+   - **Pencegahan Pembengkakan Bundle**: Seluruh modul offline (`db.js`, `outbox.js`, `syncEngine.js`, `offlineService.js`) dimuat secara dinamis lewat `import()` sehingga ukuran bundle JS awal (gzip) tetap berada di bawah batas ketat 120.67 KB.
 
 ---
 
@@ -119,6 +126,11 @@ partsbin/
     │   ├── services/
     │   │   ├── componentService.js   # Class singleton pemanggil endpoint /components
     │   │   └── projectService.js     # Class singleton pemanggil endpoint /projects
+    │   ├── offline/
+    │   │   ├── db.js                 # Pembungkus IndexedDB native (partsbin_db)
+    │   │   ├── outbox.js             # Antrean mutasi offline FIFO + validasi + coalescing
+    │   │   ├── syncEngine.js         # Engine sinkronisasi FIFO + backoff + Web Locks + BroadcastChannel
+    │   │   └── offlineService.js     # Layer orkestrasi mutasi lokal & overlay data
     │   ├── hooks/
     │   │   ├── useComponents.js      # Custom hook daftar & detail komponen (Pola 2 Modul 5)
     │   │   ├── useProjects.js        # Custom hook daftar & detail proyek + invalidasi
@@ -353,9 +365,12 @@ Menerima opsi `{ syncUrl = true }`.
    - Menggunakan API bawaan `createImageBitmap` dan `HTMLCanvasElement`.
    - Sisi terpanjang maksimal `1024px`, kualitas dinamis `0.8 > 0.7 > 0.6`, target `< 200 KB` (mencoba WebP, fallback ke JPEG).
    - Menggunakan `createImageBitmap` dengan opsi `{ imageOrientation: 'from-image' }` untuk menangani orientasi EXIF kamera mobile secara otomatis, dan memanggil `bitmap.close()` di blok `finally` untuk mencegah kebocoran memori perangkat.
-3. **Alur Finalisasi Proyek di Kalkulator**:
-   - Tombol Finalisasi disabled saat offline (`!isOnline`).
-   - Alur: `POST /api/projects` -> jika sukses & ada gambar: kompres via Canvas API lalu `POST /api/projects/:id/image` (jika upload gambar gagal: toast peringatan + tombol retry di detail, proyek tidak batal) -> hapus draf -> navigasikan ke `/projects/:id`.
+3. **Alur Finalisasi Proyek di Kalkulator (Mendukung Offline Penuh)**:
+   - *Perubahan Keputusan Sadar*: Tombol Finalisasi **TIDAK LAGI** dinonaktifkan saat offline (`disabled={submitting}`).
+   - *Alur Offline-First*:
+     - Jika Online: `POST /api/projects` -> jika sukses & ada gambar: `POST /api/projects/:id/image` -> hapus draf -> navigasikan ke detail.
+     - Jika Offline: Membuat proyek dengan ID sementara `tmp_*`, disimpan ke store `projects` IndexedDB, diantrekan ke `outbox`, berkas kompresi gambar disimpan di store `blobs` IndexedDB (bukan localStorage), lalu langsung navigasi ke detail proyek lokal dengan penanda status "Menunggu".
+     - Saat Online Kembali: Sync Engine otomatis mem-flush `outbox` FIFO, menukar `tmp_*` menjadi ID riil database di `idmap`, lalu mengeksekusi upload gambar dari store `blobs`. Tombol retry di detail tetap siap sedia jika terjadi kegagalan jaringan saat upload.
 
 ### Konfigurasi PWA & Offline Caching Gambar (`web/vite.config.js`)
 Service Worker Workbox:
@@ -378,4 +393,6 @@ Berikut adalah rekapitulasi audit keamanan dan mitigasi yang diterapkan pada rep
 | **H5** | Frontend bersih dari Supabase key dan client | **Terkonfirmasi** | Frontend murni menggunakan Axios JSON ke `/api/*` tanpa dependensi `@supabase/supabase-js`, `.env` diabaikan git, dan riwayat commit bebas key. | **Aman / Sesuai Desain** |
 | **H6** | Validasi upload gambar aman & anti-bypass | **Terkonfirmasi** | Memakai `multer.memoryStorage()`, batas 2 MB, magic bytes biner (JPEG, PNG, WebP), nama UUID server, dan rollback storage saat update DB gagal. | **Aman / Sesuai Desain** |
 | **H7** | Tidak ada rate limiting; errorHandler aman | **Terkonfirmasi** | Error 500 tidak membocorkan stack trace ke client. Ditambahkan validasi format UUID terpusat (`validateUuid.js`) pada parameter `:id` dan `:itemId`. Rate limiting ditiadakan sesuai larangan middleware berat di praktikum. | **Mitigasi Parsial** |
+| **H8** | Resolusi konflik Last-Write-Wins (LWW) tanpa kolom versi | **Terkonfirmasi** | Skema tabel database Modul 1 tidak memiliki kolom versi/timestamp konkurensi. Mutasi offline dieksekusi secara FIFO saat sinkronisasi (last-write-wins). | **Keterbatasan Diketahui** (Pilihan Desain Sederhana) |
+| **H9** | Batas kapasitas outbox offline 200 operasi dan kedaluwarsa 30 hari | **Terkonfirmasi** | Kuota outbox dibatasi maksimal 200 entri untuk mencegah kehabisan memori browser (QuotaExceededError). Operasi yang tertahan > 30 hari ditandai kedaluwarsa. | **Mitigasi Diterapkan** |
 
