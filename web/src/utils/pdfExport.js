@@ -30,7 +30,8 @@ async function loadImageDataUrl(src) {
 export async function exportProjectPdf(project) {
   if (!project) return;
   const { jsPDF } = await import('jspdf');
-  await import('jspdf-autotable');
+  const autoTablePkg = await import('jspdf-autotable');
+  const autoTable = typeof autoTablePkg.default === 'function' ? autoTablePkg.default : (typeof autoTablePkg === 'function' ? autoTablePkg : autoTablePkg.default?.default);
 
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const [pageW, pageH, margin] = [210, 297, 14];
@@ -46,7 +47,7 @@ export async function exportProjectPdf(project) {
     return false;
   };
 
-  // Header & Meta
+  // 1. Header & Meta
   doc.setFont('helvetica', 'bold').setFontSize(18).setTextColor(20, 20, 20);
   doc.text(project.name || 'Proyek PartsBin', margin, cursorY);
   cursorY += 6.5;
@@ -60,7 +61,7 @@ export async function exportProjectPdf(project) {
   doc.setDrawColor(40, 40, 40).setLineWidth(0.4).line(margin, cursorY, margin + contentW, cursorY);
   cursorY += 5;
 
-  // Deskripsi Proyek
+  // 2. Deskripsi Proyek
   if (project.description) {
     doc.setFont('helvetica', 'normal').setFontSize(9.5).setTextColor(50, 50, 50);
     const descLines = doc.splitTextToSize(project.description, contentW);
@@ -68,21 +69,25 @@ export async function exportProjectPdf(project) {
     cursorY += descLines.length * 4.2 + 3;
   }
 
-  // Sampul Proyek
+  // 3. Sampul Proyek
   if (project.image_url) {
-    const cover = await loadImageDataUrl(project.image_url);
-    if (cover) {
-      const maxH = 50;
-      const aspect = cover.width / cover.height;
-      const drawW = Math.min(contentW, maxH * aspect);
-      const drawH = drawW / aspect;
-      checkPageBreak(drawH + 5);
-      doc.addImage(cover.dataUrl, 'JPEG', margin + (contentW - drawW) / 2, cursorY, drawW, drawH);
-      cursorY += drawH + 5;
+    try {
+      const cover = await loadImageDataUrl(project.image_url);
+      if (cover) {
+        const maxH = 50;
+        const aspect = cover.width / cover.height;
+        const drawW = Math.min(contentW, maxH * aspect);
+        const drawH = drawW / aspect;
+        checkPageBreak(drawH + 5);
+        doc.addImage(cover.dataUrl, 'JPEG', margin + (contentW - drawW) / 2, cursorY, drawW, drawH);
+        cursorY += drawH + 5;
+      }
+    } catch {
+      // Abaikan jika cover gagal dimuat
     }
   }
 
-  // Ringkasan Kesiapan & Biaya BOM
+  // 4. Ringkasan Kesiapan & Biaya BOM
   const summary = calcBom(project.items || []);
   checkPageBreak(20);
   doc.setFillColor(248, 248, 248).setDrawColor(220, 220, 220).rect(margin, cursorY, contentW, 16, 'FD');
@@ -96,13 +101,13 @@ export async function exportProjectPdf(project) {
   doc.setFont('helvetica', 'bold').text(formatRupiah(summary.missing_cost), margin + colW * 2 + 3, cursorY + 11);
   cursorY += 21;
 
-  // Tabel BOM
+  // 5. Tabel BOM
   const bomRows = (summary.items || []).map((it, idx) => [
     idx + 1, it.component_name || '-', it.category || '-', it.bin_location || '-',
     it.quantity_needed, it.stock_available, it.shortage_qty > 0 ? `-${it.shortage_qty}` : '0',
     formatRupiah(it.unit_price), formatRupiah(it.subtotal),
   ]);
-  doc.autoTable({
+  autoTable(doc, {
     startY: cursorY,
     margin: { left: margin, right: margin },
     head: [['No', 'Komponen', 'Kategori', 'Lokasi', 'Butuh', 'Stok', 'Kurang', 'Harga Satuan', 'Subtotal']],
@@ -117,9 +122,9 @@ export async function exportProjectPdf(project) {
       }
     },
   });
-  cursorY = doc.lastAutoTable.finalY + 7;
+  cursorY = (doc.lastAutoTable ? doc.lastAutoTable.finalY : cursorY) + 7;
 
-  // Tabel Belanja Kekurangan
+  // 6. Tabel Belanja Kekurangan
   const shopList = summary.shopping_list || [];
   if (shopList.length > 0) {
     checkPageBreak(25);
@@ -127,7 +132,7 @@ export async function exportProjectPdf(project) {
     doc.text('Daftar Belanja Kekurangan Komponen', margin, cursorY);
     cursorY += 3.5;
     const shopRows = shopList.map((s, idx) => [idx + 1, s.component_name, `${s.shortage_qty} unit`, formatRupiah(s.shortage_cost)]);
-    doc.autoTable({
+    autoTable(doc, {
       startY: cursorY,
       margin: { left: margin, right: margin },
       head: [['No', 'Komponen Kekurangan', 'Jumlah Kurang', 'Estimasi Biaya']],
@@ -137,10 +142,10 @@ export async function exportProjectPdf(project) {
       headStyles: { fillColor: [254, 242, 242], textColor: [153, 27, 27], fontStyle: 'bold' },
       columnStyles: { 0: { cellWidth: 8, halign: 'center' }, 2: { halign: 'right', fontStyle: 'bold', textColor: [185, 28, 28] }, 3: { halign: 'right' } },
     });
-    cursorY = doc.lastAutoTable.finalY + 7;
+    cursorY = (doc.lastAutoTable ? doc.lastAutoTable.finalY : cursorY) + 7;
   }
 
-  // Dokumentasi Foto Proyek
+  // 7. Dokumentasi Foto Proyek
   const photos = project.photos || [];
   if (photos.length > 0) {
     checkPageBreak(35);
@@ -152,7 +157,12 @@ export async function exportProjectPdf(project) {
     for (let i = 0; i < photos.length; i += 2) {
       checkPageBreak(52);
       const row = [photos[i], photos[i + 1]].filter(Boolean);
-      const loadedRow = await Promise.all(row.map((p) => loadImageDataUrl(p.thumb_url ?? p.image_url)));
+      let loadedRow = [];
+      try {
+        loadedRow = await Promise.all(row.map((p) => loadImageDataUrl(p.thumb_url ?? p.image_url)));
+      } catch {
+        loadedRow = [null, null];
+      }
 
       for (let j = 0; j < row.length; j++) {
         const xPos = margin + j * (colWPhoto + 6);
@@ -161,10 +171,16 @@ export async function exportProjectPdf(project) {
 
         const loaded = loadedRow[j];
         if (loaded) {
-          const aspect = loaded.width / loaded.height;
-          const drawW = Math.min(colWPhoto - 4, (boxH - 8) * aspect);
-          const drawH = drawW / aspect;
-          doc.addImage(loaded.dataUrl, 'JPEG', xPos + (colWPhoto - drawW) / 2, cursorY + 2, drawW, drawH);
+          try {
+            const aspect = loaded.width / loaded.height;
+            const drawW = Math.min(colWPhoto - 4, (boxH - 8) * aspect);
+            const drawH = drawW / aspect;
+            doc.addImage(loaded.dataUrl, 'JPEG', xPos + (colWPhoto - drawW) / 2, cursorY + 2, drawW, drawH);
+          } catch {
+            // Jika ada error decoding gambar, tampilkan placeholder
+            doc.setFont('helvetica', 'italic').setFontSize(7).setTextColor(150, 150, 150);
+            doc.text('[Foto]', xPos + colWPhoto / 2, cursorY + 18, { align: 'center' });
+          }
         } else {
           doc.setFont('helvetica', 'italic').setFontSize(7).setTextColor(150, 150, 150);
           doc.text('[Foto tidak tersedia]', xPos + colWPhoto / 2, cursorY + 18, { align: 'center' });
@@ -177,7 +193,7 @@ export async function exportProjectPdf(project) {
     }
   }
 
-  // Footer Nomor Halaman
+  // 8. Footer Nomor Halaman
   const totalPages = doc.getNumberOfPages();
   const dateStr = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
   for (let p = 1; p <= totalPages; p++) {
