@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import photoService from '../services/photoService';
+import LazyImage from './LazyImage';
 
 // Subkomponen per item foto galeri dengan edit caption inline dan fallback SVG
 export default function ProjectGalleryItem({
@@ -42,16 +43,15 @@ export default function ProjectGalleryItem({
     <div className="gallery-item">
       <div className="gallery-item__img-wrapper">
         {!imgError && (photo.thumb_url || photo.image_url) ? (
-          <img
+          // Pemuatan malas berbasis IntersectionObserver untuk mencegah unduhan foto di luar viewport
+          <LazyImage
             src={photo.thumb_url ?? photo.image_url}
             alt={photo.caption || `Foto dokumentasi ${index + 1}`}
-            loading="lazy"
-            decoding="async"
-            crossOrigin="anonymous"
+            width="400"
+            height="300"
             onError={() => setImgError(true)}
             onClick={() => onPhotoClick?.(index)}
             className="gallery-item__img"
-            style={{ cursor: onPhotoClick ? 'pointer' : 'default' }}
           />
         ) : (
           <div className="gallery-item__fallback" aria-label="Gambar gagal dimuat">

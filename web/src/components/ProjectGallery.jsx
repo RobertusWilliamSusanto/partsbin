@@ -60,7 +60,6 @@ export default function ProjectGallery({ projectId, photos = [], photoLimit = 12
         const { full, thumb } = await compressWithThumb(file);
         await photoService.addPhoto(projectId, full.file, '', thumb?.file);
         successCount++;
-        onPhotoMutated?.();
       } catch (err) {
         console.warn(`Unggah berkas ${file.name} gagal:`, err);
         const isNet = !navigator.onLine || !err?.status || err.status === 0;
@@ -74,6 +73,8 @@ export default function ProjectGallery({ projectId, photos = [], photoLimit = 12
           setStatusMessage(
             `Koneksi terputus saat mengunggah "${file.name}". ${successCount} foto berhasil diunggah.`
           );
+          // Sinkronkan data foto yang sudah berhasil sebelum jaringan terputus
+          if (successCount > 0) onPhotoMutated?.();
           return;
         }
         // Gagal validasi (400/413): catat kegagalan dan lanjutkan berkas antrean berikutnya
@@ -85,6 +86,8 @@ export default function ProjectGallery({ projectId, photos = [], photoLimit = 12
     setUploading(false);
     setUploadProgress('');
     setFailedFiles(failed.map((f) => f.file));
+    // Muat ulang daftar foto satu kali di akhir antrean untuk mencegah render ulang berulang
+    if (successCount > 0) onPhotoMutated?.();
 
     let finalMsg = `${successCount} foto berhasil diunggah.`;
     if (failed.length > 0) {
