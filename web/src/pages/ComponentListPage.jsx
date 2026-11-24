@@ -9,6 +9,7 @@ import {
 import { useComponents, updateComponentInCache } from '../hooks/useComponents';
 import { invalidateProjectsCache } from '../hooks/useProjects';
 import { usePagination } from '../hooks/usePagination';
+import { isLowStock } from '../utils/stock';
 import componentService from '../services/componentService';
 import FilterBar from '../components/FilterBar';
 import ComponentInlineForm from '../components/ComponentInlineForm';
@@ -35,7 +36,8 @@ export default function ComponentListPage() {
     const q = search.trim().toLowerCase();
     return components.filter((comp) => {
       if (category !== 'ALL' && comp.category !== category) return false;
-      if (onlyLowStock && !comp.is_low_stock) return false;
+      // Filter stok menipis berdasarkan fungsi terpusat isLowStock
+      if (onlyLowStock && !isLowStock(comp)) return false;
       if (!q) return true;
       return (
         comp.name.toLowerCase().includes(q) ||

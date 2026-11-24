@@ -1,6 +1,7 @@
 import { getItem, getAll, putItem, deleteItem } from './db';
 import { enqueueOp } from './outbox';
 import { calcBom } from '../utils/bom';
+import { isLowStock } from '../utils/stock';
 
 // Menggabungkan data server dengan perubahan lokal tertunda (Prinsip 7: Overlay)
 export async function overlayComponents(serverList) {
@@ -110,7 +111,8 @@ export async function offlineCreateComponent(payload) {
     stock: Number(payload.stock ?? 0),
     min_stock: Number(payload.min_stock ?? 2),
     unit_price: Number(payload.unit_price ?? 0),
-    is_low_stock: Number(payload.stock ?? 0) <= Number(payload.min_stock ?? 2),
+    // Hitung status stok menipis memakai rumus terpusat isLowStock
+    is_low_stock: isLowStock({ stock: payload.stock, min_stock: payload.min_stock }),
     created_at: new Date().toISOString(),
   };
   await putItem('components', newComp);
@@ -131,7 +133,8 @@ export async function offlineUpdateStock(id, nextStock) {
   const updatedComp = {
     ...comp,
     stock: nextStock,
-    is_low_stock: nextStock <= Number(comp.min_stock ?? 2),
+    // Hitung status stok menipis memakai rumus terpusat isLowStock
+    is_low_stock: isLowStock({ stock: nextStock, min_stock: comp.min_stock }),
   };
   await putItem('components', updatedComp);
   await enqueueOp({
@@ -150,7 +153,8 @@ export async function offlineUpdateComponent(id, payload) {
   const updatedComp = {
     ...comp,
     ...payload,
-    is_low_stock: Number(payload.stock ?? comp.stock) <= Number(payload.min_stock ?? comp.min_stock),
+    // Hitung status stok menipis memakai rumus terpusat isLowStock
+    is_low_stock: isLowStock({ stock: payload.stock ?? comp.stock, min_stock: payload.min_stock ?? comp.min_stock }),
   };
   await putItem('components', updatedComp);
   await enqueueOp({
