@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, Cpu, Calculator, User } from 'lucide-react';
 import { useComponents } from '../hooks/useComponents';
+import { isLowStock } from '../utils/stock';
 
 // 4 tab navigasi utama BottomNav sesuai spesifikasi v4.0 (aktif di seluruh lebar layar)
 const NAV_ITEMS = [
@@ -14,9 +15,10 @@ const NAV_ITEMS = [
 export default function BottomNav() {
   const { components } = useComponents();
 
+  // Hitung jumlah komponen stok menipis secara dinamis berdasarkan perbandingan stock <= min_stock
   const lowStockCount = useMemo(() => {
     return Array.isArray(components)
-      ? components.filter((c) => c.is_low_stock).length
+      ? components.filter((c) => isLowStock(c)).length
       : 0;
   }, [components]);
 
