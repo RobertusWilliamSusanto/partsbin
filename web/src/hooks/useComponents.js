@@ -7,6 +7,7 @@ import {
   setComponentDetailCache,
   invalidateComponentsCache,
   updateComponentInCache,
+  subscribeComponents,
 } from '../utils/dataCache';
 
 export { invalidateComponentsCache, updateComponentInCache };
@@ -62,6 +63,16 @@ export function useComponents() {
       }
     };
   }, [reloadKey, refetch]);
+
+  // Berlangganan perubahan in-memory cache komponen tanpa perlu pemicu fetch jaringan tambahan
+  useEffect(() => {
+    return subscribeComponents(() => {
+      const cached = getComponentsListCache();
+      if (cached) {
+        setComponents((prev) => (prev === cached ? prev : cached));
+      }
+    });
+  }, []);
 
   return { components, setComponents, loading, error, refetch };
 }
@@ -121,6 +132,17 @@ export function useComponent(id) {
       }
     };
   }, [id, reloadKey, refetch]);
+
+  // Berlangganan perubahan cache detail komponen spesifik untuk sinkronisasi seketika
+  useEffect(() => {
+    if (!id) return undefined;
+    return subscribeComponents(() => {
+      const cached = getComponentDetailCache(id);
+      if (cached) {
+        setComponent((prev) => (prev === cached ? prev : cached));
+      }
+    });
+  }, [id]);
 
   const activeComponent = component?.id === id ? component : cached;
   const isInitialLoading = loading && !activeComponent;

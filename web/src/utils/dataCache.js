@@ -4,6 +4,25 @@
 
 let componentsListCache = null;
 const componentDetailCache = new Map();
+// Set penyimpan fungsi pendengar (listener) perubahan cache data komponen
+const componentListeners = new Set();
+
+// Daftarkan listener baru dan kembalikan fungsi pembersih (unsubscribe)
+export function subscribeComponents(fn) {
+  componentListeners.add(fn);
+  return () => componentListeners.delete(fn);
+}
+
+// Beri tahu seluruh listener yang berlangganan saat cache komponen dimutasi
+function notifyComponents() {
+  componentListeners.forEach((fn) => {
+    try {
+      fn();
+    } catch (e) {
+      console.warn('Komponen listener gagal:', e);
+    }
+  });
+}
 
 let projectsListCache = null;
 const projectDetailCache = new Map();
@@ -14,6 +33,7 @@ export function getComponentsListCache() {
 
 export function setComponentsListCache(list) {
   componentsListCache = list;
+  notifyComponents();
 }
 
 export function getComponentDetailCache(id) {
@@ -54,6 +74,7 @@ export function invalidateComponentsCache(id, { cascadeProjects = true } = {}) {
     projectsListCache = null;
     projectDetailCache.clear();
   }
+  notifyComponents();
 }
 
 export function updateComponentInCache(updatedComp) {
@@ -71,6 +92,7 @@ export function updateComponentInCache(updatedComp) {
   // Wajib invalidasi seluruh cache proyek agar Build Readiness % & Daftar Belanja langsung segar
   projectsListCache = null;
   projectDetailCache.clear();
+  notifyComponents();
 }
 
 // Setiap mutasi proyek atau item BOM otomatis meng-invalidasi cache detail komponen

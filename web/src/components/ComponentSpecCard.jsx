@@ -8,6 +8,7 @@ import {
   Clock,
 } from 'lucide-react';
 import { formatRupiah } from '../utils/format';
+import { isLowStock } from '../utils/stock';
 
 // Subkomponen kartu inspeksi spesifikasi dan kontrol stok cepat komponen
 export default function ComponentSpecCard({
@@ -18,6 +19,8 @@ export default function ComponentSpecCard({
   onDelete,
 }) {
   const isPending = String(component.id).startsWith('tmp_');
+  // Deteksi status peringatan stok langsung dari kalkulasi stock <= min_stock
+  const lowStock = isLowStock(component);
 
   return (
     <div className="card stack-md">
@@ -31,7 +34,7 @@ export default function ComponentSpecCard({
             </span>
           )}
         </div>
-        {component.is_low_stock ? (
+        {lowStock ? (
           <span className="chip chip--warn">
             <AlertTriangle size={20} strokeWidth={1.75} aria-hidden="true" />
             <span>Stok Menipis</span>

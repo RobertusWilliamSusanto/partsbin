@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Plus, Minus, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
 import { formatRupiah } from '../utils/format';
+import { isLowStock } from '../utils/stock';
 
 // Subkomponen kartu item katalog komponen dengan link ke detail dan stepper stok cepat
 export default function ComponentCardItem({
@@ -9,6 +10,8 @@ export default function ComponentCardItem({
   onStepStock,
 }) {
   const isPending = String(comp.id).startsWith('tmp_');
+  // Deteksi status peringatan stok langsung dari nilai stok fisik terhadap min_stock
+  const lowStock = isLowStock(comp);
 
   return (
     <li className="card card--interactive card--flex">
@@ -22,13 +25,13 @@ export default function ComponentCardItem({
                 <span>Menunggu</span>
               </span>
             )}
-            <span className={`chip chip--${comp.is_low_stock ? 'warn' : 'ok'}`}>
-              {comp.is_low_stock ? (
+            <span className={`chip chip--${lowStock ? 'warn' : 'ok'}`}>
+              {lowStock ? (
                 <AlertTriangle size={20} strokeWidth={1.75} aria-hidden="true" />
               ) : (
                 <CheckCircle2 size={20} strokeWidth={1.75} aria-hidden="true" />
               )}
-              <span>{comp.is_low_stock ? 'Stok Menipis' : 'Cukup'}</span>
+              <span>{lowStock ? 'Stok Menipis' : 'Cukup'}</span>
             </span>
           </div>
         </div>

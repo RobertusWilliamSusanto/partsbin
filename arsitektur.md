@@ -460,4 +460,39 @@ Aplikasi menerapkan mitigasi 4 lapis untuk mencegah kendala macet atau blank scr
 4. **Lapisan Offline Fail-Open (`web/src/utils/safeOffline.js`)**:
    Modul offline dimuat secara dinamis via `import()` demi menjaga anggaran bundle awal. Pemanggilan operasi offline dibungkus dengan batas waktu 2500ms (`withTimeout`) dan mekanisme *fail-open*: bila impor chunk offline gagal atau IndexedDB terkendala, aplikasi langsung jatuh kembali ke pengambilan data API online tanpa menghentikan rendering Dashboard atau Katalog Komponen.
 
+---
+
+## 10. Optimasi Peringatan Stok & Lazy Loading Gambar Galeri (v5.4)
+
+### A. Peringatan Stok Real-Time (Pub-Sub dataCache + isLowStock)
+1. **Pola Pub-Sub Ringan In-Memory (`dataCache.js`)**:
+   - `dataCache.js` menyediakan fungsi `subscribeComponents(fn)` dan `notifyComponents()`.
+   - Setiap mutasi komponen (`setComponentsListCache`, `updateComponentInCache`, `invalidateComponentsCache`) otomatis memicu `notifyComponents()`.
+   - Hook `useComponents` dan `useComponent` berlangganan mutasi ini tanpa memicu fetch jaringan tambahan (`prev === cached ? prev : cached`).
+   - Hasil: Komponen yang selalu mounted seperti `BottomNav` menerima pembaruan secara instan saat stepper stok diklik dari halaman katalog maupun detail komponen, tanpa perlu reload halaman.
+2. **Kalkulasi Status Stok Terpusat (`web/src/utils/stock.js`)**:
+   - Menggunakan fungsi murni `isLowStock(component)` dengan rumus `stock <= min_stock` (default `min_stock: 2` sesuai `schema.sql` dan `componentController.js:27`).
+   - Diterapkan secara seragam di `BottomNav` (perhitungan badge), `ComponentCardItem`, `ComponentSpecCard`, filter `ComponentListPage`, dan `offlineService.js`.
+3. **Keterbatasan Jujur**:
+   - Sinkronisasi instan ini beroperasi di dalam satu tab browser (in-memory pub-sub). Untuk sinkronisasi lintas-tab, aplikasi tetap mengandalkan event `partsbin:sync-event` dan pembaruan via service worker / refetch saat tab kembali aktif.
+
+### B. Lazy Load Gambar Galeri (IntersectionObserver)
+1. **Komponen `LazyImage.jsx` Berbasis Observer Tunggal**:
+   - Menggunakan satu instance `IntersectionObserver` bersama (`rootMargin: "200px 0px"`).
+   - Elemen `<img>` baru dirender (src dipasang) saat container mendekati batas 200px dari viewport, lalu observer segera melakukan `unobserve`.
+   - Fallback otomatis ke `loading="lazy"` native jika browser tidak mendukung `IntersectionObserver`.
+   - Menyertakan atribut eksplisit `width="400"` dan `height="300"` dengan container `aspect-ratio: 4 / 3` untuk menjaga Cumulative Layout Shift (CLS = 0).
+   - Pengurangan beban jaringan: Pada proyek 30 foto, jumlah request gambar sebelum scroll turun drastis dari 13 request (seluruh 12 thumbnail batch 1 dimuat sekaligus oleh Chrome) menjadi hanya 5 request (1 cover + 4 thumbnail yang dekat viewport).
+2. **Batching Mutasi Unggah (`ProjectGallery.jsx`)**:
+   - Pemanggilan `onPhotoMutated` dipindahkan ke akhir antrean unggah (hanya dipanggil 1 kali setelah antrean selesai atau saat jaringan terputus), menghilangkan 29 request redundan `GET /api/projects/:id` dan 29 kali re-render galeri.
+3. **Keterbatasan Jujur**:
+   - Jika pengguna melakukan scroll cepat ke bagian bawah galeri, sisa thumbnail batch aktif tetap akan diminta secara berurutan sesuai interseksi viewport; ini merupakan perilaku pemuatan malas yang memang diharapkan.
+
+### C. Catatan Audit Dependensi PDF (Temuan K1)
+- Library `jspdf` (^4.2.1) dan `jspdf-autotable` (^5.0.9) terdaftar pada `dependencies` di `web/package.json` untuk fitur unduh PDF biner langsung sekali klik (`pdfExport.js`).
+- Library ini dimuat secara dinamis via `import()` (lazy chunk terpisah: `jspdf.es.min`, `jspdf.plugin.autotable`, `pdfExport`), sehingga tidak membebani ukuran bundle JS awal (`index.html`).
+- Hasil audit keamanan `npm audit --omit=dev` menunjukkan 0 vulnerability.
+- Meskipun fitur ini telah didokumentasikan di arsitektur bagian 1 butir 9 dan bagian 7 butir 4, daftar putih teks pada bagian 2B sebelumnya hanya mencatat 3 dependensi awal (`axios`, `lucide-react`, `react-router-dom`).
+
+
 
