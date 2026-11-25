@@ -404,8 +404,8 @@ export default function ProfilePage({ theme, onToggleTheme }) {
           </div>
         </div>
 
-        {/* Bagian 2: Tentang Aplikasi */}
-        <div className="card stack-md">
+        {/* Bagian 2: Tentang Aplikasi (tanpa card, menyatu rapi) */}
+        <div className="profile-section" style={{ marginTop: 8 }}>
           <div className="card-head">
             <div className="row-wrap" style={{ flex: 1, minWidth: 0 }}>
               <Info size={20} strokeWidth={1.75} aria-hidden="true" />
@@ -434,23 +434,25 @@ export default function ProfilePage({ theme, onToggleTheme }) {
 
           <div className="stack-sm">
             <span className="form-label">Rumus Kalkulator BOM &amp; Stok</span>
-            <div className="spec-cell">
-              <span className="spec-cell__label">Kesiapan Rakit (Build Readiness %)</span>
-              <span className="mono-badge" style={{ marginTop: 4 }}>
-                {APP_INFO.formulaSummary.readiness}
-              </span>
-            </div>
-            <div className="spec-cell">
-              <span className="spec-cell__label">Kekurangan per Item (Shopping Deficit)</span>
-              <span className="mono-badge" style={{ marginTop: 4 }}>
-                {APP_INFO.formulaSummary.shortage}
-              </span>
-            </div>
-            <div className="spec-cell">
-              <span className="spec-cell__label">Deteksi Stok Menipis</span>
-              <span className="mono-badge" style={{ marginTop: 4 }}>
-                {APP_INFO.formulaSummary.lowStock}
-              </span>
+            <div className="stack-sm">
+              <div>
+                <div className="spec-cell__label">Kesiapan Rakit (Build Readiness %)</div>
+                <span className="mono-badge" style={{ marginTop: 4 }}>
+                  {APP_INFO.formulaSummary.readiness}
+                </span>
+              </div>
+              <div>
+                <div className="spec-cell__label">Kekurangan per Item (Shopping Deficit)</div>
+                <span className="mono-badge" style={{ marginTop: 4 }}>
+                  {APP_INFO.formulaSummary.shortage}
+                </span>
+              </div>
+              <div>
+                <div className="spec-cell__label">Deteksi Stok Menipis</div>
+                <span className="mono-badge" style={{ marginTop: 4 }}>
+                  {APP_INFO.formulaSummary.lowStock}
+                </span>
+              </div>
             </div>
           </div>
         </div>
