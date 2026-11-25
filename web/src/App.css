@@ -30,6 +30,11 @@
   margin-bottom: 16px;
 }
 
+.masthead--plain {
+  border-bottom: none;
+  margin-bottom: 8px;
+}
+
 .masthead__row {
   display: flex;
   align-items: flex-start;
@@ -1260,4 +1265,64 @@
 .bom-builder-row__qty {
   width: 76px;
   flex-shrink: 0;
+}
+
+/* --- 10. Profil Tanpa Card & Tanpa Garis --- */
+.profile-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.profile-hero {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.profile-avatar {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--accent-tint);
+  color: var(--accent);
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.profile-hero__info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.profile-hero__name {
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--text);
+  overflow-wrap: break-word;
+  max-width: 100%;
+}
+
+.profile-meta-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
