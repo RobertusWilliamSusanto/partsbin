@@ -1,7 +1,37 @@
-const CATEGORIES = ['MCU', 'Sensor', 'Passive', 'Power', 'Actuator', 'Connector', 'Display'];
+import { useState } from 'react';
+import { getAvailableCategories, saveCustomCategory } from '../utils/categories';
+
+const ADD_NEW_VALUE = '__ADD_NEW_CATEGORY__';
 
 // Subkomponen sekumpulan input field form data komponen inventaris
-export default function ComponentFormFields({ form, onChange }) {
+export default function ComponentFormFields({ form, onChange, categories: propCategories }) {
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [customAdded, setCustomAdded] = useState([]);
+
+  const categoryOptions = getAvailableCategories(
+    [],
+    [...(propCategories || []), ...customAdded, form.category]
+  );
+
+  const handleSelectChange = (value) => {
+    if (value === ADD_NEW_VALUE) {
+      setIsAddingCategory(true);
+      setNewCategoryName('');
+      return;
+    }
+    onChange('category', value);
+  };
+
+  const handleConfirmNewCategory = () => {
+    const saved = saveCustomCategory(newCategoryName);
+    if (!saved) return;
+    setCustomAdded((prev) => (prev.includes(saved) ? prev : [...prev, saved]));
+    onChange('category', saved);
+    setNewCategoryName('');
+    setIsAddingCategory(false);
+  };
+
   return (
     <>
       <div className="form-group">
@@ -24,18 +54,63 @@ export default function ComponentFormFields({ form, onChange }) {
           <label className="form-label" htmlFor="comp-category">
             Kategori
           </label>
-          <select
-            id="comp-category"
-            className="form-select"
-            value={form.category}
-            onChange={(e) => onChange('category', e.target.value)}
-          >
-            {CATEGORIES.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
+          {isAddingCategory ? (
+            <div className="stack-sm">
+              <input
+                id="comp-category"
+                type="text"
+                className="form-input"
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleConfirmNewCategory();
+                  } else if (e.key === 'Escape') {
+                    setIsAddingCategory(false);
+                    setNewCategoryName('');
+                  }
+                }}
+                placeholder="Nama kategori baru (mis. RF)"
+                maxLength={50}
+                autoFocus
+              />
+              <div className="row-wrap">
+                <button
+                  type="button"
+                  className="btn btn--primary btn--sm"
+                  onClick={handleConfirmNewCategory}
+                  disabled={!newCategoryName.trim()}
+                >
+                  Pakai Kategori
+                </button>
+                <button
+                  type="button"
+                  className="btn btn--outline btn--sm"
+                  onClick={() => {
+                    setIsAddingCategory(false);
+                    setNewCategoryName('');
+                  }}
+                >
+                  Batal
+                </button>
+              </div>
+            </div>
+          ) : (
+            <select
+              id="comp-category"
+              className="form-select"
+              value={form.category}
+              onChange={(e) => handleSelectChange(e.target.value)}
+            >
+              {categoryOptions.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+              <option value={ADD_NEW_VALUE}>+ Tambah Kategori Baru...</option>
+            </select>
+          )}
         </div>
 
         <div className="form-group">

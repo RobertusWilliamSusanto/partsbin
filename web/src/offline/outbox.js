@@ -1,8 +1,8 @@
 import { getAll, putItem, deleteItem } from './db';
+import { isValidCategory } from '../utils/categories';
 
 const MAX_OUTBOX_OPS = 200;
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
-const VALID_CATEGORIES = ['MCU', 'Sensor', 'Passive', 'Power', 'Actuator', 'Connector', 'Display'];
 const VALID_STATUSES = ['planned', 'in_progress', 'done'];
 
 // Membuat pengenal acak unik untuk operasi antrean
@@ -23,7 +23,7 @@ function validatePayload(entityType, method, payload) {
       if (!payload.name || typeof payload.name !== 'string' || !payload.name.trim()) {
         throw new Error('Nama komponen wajib diisi.');
       }
-      if (!VALID_CATEGORIES.includes(payload.category)) {
+      if (!isValidCategory(payload.category)) {
         throw new Error(`Kategori tidak valid: ${payload.category}`);
       }
       if (Number(payload.stock) < 0 || Number(payload.min_stock) < 0 || Number(payload.unit_price) < 0) {

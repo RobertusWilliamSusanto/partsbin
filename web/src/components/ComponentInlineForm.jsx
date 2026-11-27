@@ -10,6 +10,7 @@ import {
   formatDraftTime,
 } from '../utils/draftStorage';
 import ComponentFormFields from './ComponentFormFields';
+import { saveCustomCategory } from '../utils/categories';
 
 const EMPTY_FORM = {
   name: '',
@@ -35,7 +36,7 @@ function toFormState(initialData) {
 }
 
 // Form inline terintegrasi (tanpa pop-up modal) untuk Tambah Komponen & Edit in-place
-export default function ComponentInlineForm({ initialData = null, onCancel, onSaved }) {
+export default function ComponentInlineForm({ initialData = null, categories, onCancel, onSaved }) {
   const isEdit = Boolean(initialData?.id);
 
   const [form, setForm] = useState(() => toFormState(initialData));
@@ -83,7 +84,7 @@ export default function ComponentInlineForm({ initialData = null, onCancel, onSa
 
     const payload = {
       name: form.name.trim(),
-      category: form.category,
+      category: form.category.trim(),
       stock: Number(form.stock),
       min_stock: Number(form.min_stock),
       unit_price: Number(form.unit_price),
@@ -91,10 +92,12 @@ export default function ComponentInlineForm({ initialData = null, onCancel, onSa
       specs: form.specs.trim(),
     };
 
-    if (!payload.name || !payload.bin_location) {
-      setError('Nama komponen dan lokasi laci wajib diisi.');
+    if (!payload.name || !payload.bin_location || !payload.category) {
+      setError('Nama komponen, kategori, dan lokasi laci wajib diisi.');
       return;
     }
+
+    saveCustomCategory(payload.category);
 
     setSubmitting(true);
     try {
@@ -160,7 +163,7 @@ export default function ComponentInlineForm({ initialData = null, onCancel, onSa
       )}
 
       <form className="stack-md" onSubmit={handleSubmit}>
-        <ComponentFormFields form={form} onChange={handleChange} />
+        <ComponentFormFields form={form} onChange={handleChange} categories={categories} />
 
         {!isEdit && lastSavedAt && (
           <div className="row-between">

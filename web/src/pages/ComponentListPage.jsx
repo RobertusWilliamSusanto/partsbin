@@ -10,19 +10,29 @@ import { useComponents, updateComponentInCache } from '../hooks/useComponents';
 import { invalidateProjectsCache } from '../hooks/useProjects';
 import { usePagination } from '../hooks/usePagination';
 import { isLowStock } from '../utils/stock';
+import { getAvailableCategories } from '../utils/categories';
 import componentService from '../services/componentService';
 import FilterBar from '../components/FilterBar';
 import ComponentInlineForm from '../components/ComponentInlineForm';
 import ComponentCardItem from '../components/ComponentCardItem';
 import Pagination from '../components/Pagination';
 
-const CATEGORY_PILLS = ['ALL', 'MCU', 'Sensor', 'Passive', 'Power', 'Actuator', 'Connector', 'Display'].map((v) => ({
-  value: v,
-  label: v === 'ALL' ? 'All' : v,
-}));
-
 export default function ComponentListPage() {
   const { components, setComponents, loading, error, refetch } = useComponents();
+
+  const availableCategories = useMemo(
+    () => getAvailableCategories(components),
+    [components]
+  );
+
+  const categoryPills = useMemo(
+    () =>
+      ['ALL', ...availableCategories].map((v) => ({
+        value: v,
+        label: v === 'ALL' ? 'All' : v,
+      })),
+    [availableCategories]
+  );
 
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('ALL');
@@ -94,6 +104,7 @@ export default function ComponentListPage() {
       {isFormOpen && (
         <div style={{ marginBottom: 16 }}>
           <ComponentInlineForm
+            categories={availableCategories}
             onCancel={() => setIsFormOpen(false)}
             onSaved={() => {
               setIsFormOpen(false);
@@ -107,7 +118,7 @@ export default function ComponentListPage() {
         search={search}
         onSearchChange={setSearch}
         placeholder="Cari komponen, laci (A-01), atau spek..."
-        pills={CATEGORY_PILLS}
+        pills={categoryPills}
         activePill={category}
         onPillChange={setCategory}
         extraToggle={{

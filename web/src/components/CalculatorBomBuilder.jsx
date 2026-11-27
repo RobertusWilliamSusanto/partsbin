@@ -1,8 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Plus, Trash2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { formatRupiah } from '../utils/format';
-
-const CATEGORIES = ['MCU', 'Sensor', 'Passive', 'Power', 'Actuator', 'Connector', 'Display'];
+import { getAvailableCategories } from '../utils/categories';
 
 // Subkomponen perakit Bill of Materials (BOM) dengan dropdown <optgroup> per kategori & proteksi duplikat
 export default function CalculatorBomBuilder({
@@ -23,10 +22,15 @@ export default function CalculatorBomBuilder({
     [bomItems]
   );
 
+  const categories = useMemo(
+    () => getAvailableCategories(components),
+    [components]
+  );
+
   // Kelompokkan komponen berdasarkan kategori untuk <optgroup>
   const groupedComponents = useMemo(() => {
     const map = {};
-    for (const cat of CATEGORIES) {
+    for (const cat of categories) {
       map[cat] = [];
     }
     for (const comp of components) {
@@ -35,7 +39,7 @@ export default function CalculatorBomBuilder({
       map[cat].push(comp);
     }
     return map;
-  }, [components]);
+  }, [components, categories]);
 
   const handleAdd = (e) => {
     e.preventDefault();
@@ -82,7 +86,7 @@ export default function CalculatorBomBuilder({
             disabled={disabled}
           >
             <option value="">-- Pilih dari inventaris --</option>
-            {CATEGORIES.map((cat) => {
+            {categories.map((cat) => {
               const list = groupedComponents[cat] || [];
               if (list.length === 0) return null;
               return (

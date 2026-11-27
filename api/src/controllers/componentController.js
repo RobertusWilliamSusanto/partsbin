@@ -1,15 +1,5 @@
 import { componentModel } from '../models/componentModel.js';
 
-const ALLOWED_CATEGORIES = [
-  'MCU',
-  'Sensor',
-  'Passive',
-  'Power',
-  'Actuator',
-  'Connector',
-  'Display',
-];
-
 // Kenapa tidak pakai parseInt()? Karena parseInt("12abc") lolos menjadi 12 dan parseInt(1.5) menjadi 1.
 // parseIntStrict menolak boolean, string kosong, huruf, maupun angka desimal.
 function parseIntStrict(val) {
@@ -48,9 +38,9 @@ function validateComponentPayload(body, { requireComplete = false } = {}) {
   }
 
   const category = typeof body.category === 'string' ? body.category.trim() : '';
-  if (!ALLOWED_CATEGORIES.includes(category)) {
+  if (!category || category.length > 50) {
     return {
-      error: `Kategori wajib salah satu dari: ${ALLOWED_CATEGORIES.join(', ')}.`,
+      error: 'Kategori wajib diisi (maksimal 50 karakter).',
     };
   }
 
