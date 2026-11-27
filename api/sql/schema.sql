@@ -10,9 +10,7 @@
 CREATE TABLE IF NOT EXISTS components (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name VARCHAR(120) NOT NULL,
-  category VARCHAR(50) NOT NULL CHECK (
-    category IN ('MCU', 'Sensor', 'Passive', 'Power', 'Actuator', 'Connector', 'Display')
-  ),
+  category VARCHAR(50) NOT NULL CHECK (length(btrim(category)) BETWEEN 1 AND 50),
   stock INTEGER NOT NULL DEFAULT 0 CHECK (stock >= 0),
   min_stock INTEGER NOT NULL DEFAULT 2 CHECK (min_stock >= 0),
   unit_price INTEGER NOT NULL DEFAULT 0 CHECK (unit_price >= 0),
